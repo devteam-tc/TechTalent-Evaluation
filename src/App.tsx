@@ -10,6 +10,7 @@ import Exam from "./pages/Exam";
 import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import DevTalentComponent from "./pages/Dev";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,8 @@ const App = () => (
           <Route path="/exam" element={<Exam />} />
           <Route path="/success" element={<Success />} />
           <Route path="/dashboard" element={<Dashboard/>} />
+           <Route path="/dev" element={<DevTalentComponent/>} />
+
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

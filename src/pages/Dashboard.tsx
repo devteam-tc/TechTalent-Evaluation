@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Key } from 'react';
+import jsPDF from 'jspdf';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 interface Student {
+  user_name: Key;
   user_id: number;
   name: string;
   email: string;
@@ -58,6 +60,7 @@ interface ExamResultsResponse {
   attempts: {
     attempt_id: number;
     user_id: number;
+    user_name: string;
     score: number;
     total: number;
     percent: number;
@@ -161,7 +164,8 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (exams.length > 0 && !selectedExamId) {
-      setSelectedExamId(exams[0].id);
+      const defaultExam = exams.find(e => e.id === '1') || exams[0];
+      setSelectedExamId(defaultExam.id);
     }
   }, [exams, selectedExamId]);
 
@@ -174,7 +178,7 @@ const Dashboard: React.FC = () => {
   const fetchExams = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch("https://api.devtalent.securxperts.com:8000/exam/exams", {
+      const response = await fetch("https://api.devtalent.securxperts.com:8000/admin/exams", {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
@@ -297,17 +301,17 @@ const Dashboard: React.FC = () => {
           "Authorization": `Bearer ${token}`,
         },
       });
-      if (response.ok) {
+        if (response.ok) {
         const responseData: ExamResultsResponse = await response.json();
-        console.log('Fetched results data:', responseData); // Debug log
+        console.log('Fetched results data:', responseData); //d Debug log
         const processedResults: Result[] = responseData.attempts.map(attempt => {
           const student = students.find(s => s.user_id === attempt.user_id);
-          console.log('Processing attempt for user:', attempt.user_id, 'Student found:', student); // Debug log
+          console.log('Processing attempt for user id:', attempt.user_id, 'user_name:', attempt.user_name, 'Student found:', student); // Debug log
           const isShortlisted = attempt.breakdown?.every((bd: Breakdown) => bd.percent > 50) || false;
           return {
             attemptId: attempt.attempt_id,
             studentId: attempt.user_id,
-            studentName: student ? student.name : `User ${attempt.user_id}`,
+            studentName: student ? student.name : (attempt.user_name || `User ${attempt.user_id}`),
             examId: examId,
             score: attempt.score,
             total: attempt.total,
@@ -337,6 +341,28 @@ const Dashboard: React.FC = () => {
     if (filter === 'shortlisted') return result.isShortlisted;
     return !result.isShortlisted;
   });
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Student Results - Exam ID: ${selectedExamId} (${filter})`, 14, 20);
+    let y = 30;
+    displayedResults.forEach((result, index) => {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(10);
+      doc.text(
+        `${index + 1}. ${result.studentName} | Score: ${result.score}/${result.total} | ${result.percentage}% | Status: ${result.isShortlisted ? 'Shortlisted' : 'Not Shortlisted'} | Submitted: ${result.submittedAt}`,
+        14,
+        y
+      );
+      y += 7;
+    });
+    doc.save(`student_results_${selectedExamId}_${filter}.pdf`);
+    toast.success("PDF downloaded successfully!");
+  };
 
   const handleCreateExamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -831,6 +857,7 @@ const Dashboard: React.FC = () => {
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-lg font-medium text-gray-900">Student Results</h2>
               <div className="flex items-center space-x-4">
+                <Button onClick={downloadPDF} variant="outline">Download PDF</Button>
                 <div className="flex items-center space-x-2">
                   <Label className="text-sm font-medium">Select Exam:</Label>
                   <Select value={selectedExamId} onValueChange={handleExamChange}>

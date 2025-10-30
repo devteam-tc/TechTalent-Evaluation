@@ -44,6 +44,15 @@ const Exam = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const allQuestions: Question[] = passedQuestions || [];
+  const localStorageKey = `examAnswers_${attempt_id}_${subject}`;
+
+  // Load answers from localStorage on mount
+  useEffect(() => {
+    const savedAnswers = localStorage.getItem(localStorageKey);
+    if (savedAnswers) {
+      setAnswers(JSON.parse(savedAnswers));
+    }
+  }, [localStorageKey]);
 
   // Helper to handle image load success
   const handleImageLoad = (url: string) => {
@@ -125,6 +134,46 @@ const Exam = () => {
     }
   }, [showAlert]);
 
+  // Prevent browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      history.pushState(null, '', location.href);
+      toast.error("Please submit the section to navigate to remaining sections.");
+    };
+
+    history.pushState(null, '', location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [location.href]);
+
+  // Prevent undo/redo shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'z' || event.key === 'y')) {
+        event.preventDefault();
+        toast.error("Undo/Redo is disabled during the exam. Please submit the section to navigate to remaining sections.");
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Prevent leaving the page without submitting
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "Please submit the section to navigate to remaining sections.";
+      return "Please submit the section to navigate to remaining sections.";
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   const updateWarning = (timeLeft: number) => {
     if (timeLeft <= 60) {
       setWarningMessage("Time is over! Please submit the task.");
@@ -145,7 +194,10 @@ const Exam = () => {
   const currentQ = allQuestions[currentQuestion];
 
   const handleAnswerChange = (value: string) => {
-    setAnswers({ ...answers, [currentQ.question_id]: Number(value) });
+    const newAnswers = { ...answers, [currentQ.question_id]: Number(value) };
+    setAnswers(newAnswers);
+    // Save to localStorage
+    localStorage.setItem(localStorageKey, JSON.stringify(newAnswers));
   };
 
   const handleNext = () => {
@@ -158,11 +210,7 @@ const Exam = () => {
     // Disabled: no going back
   };
 
-  const handleQuestionClick = (index: number) => {
-    if (index >= currentQuestion) {
-      setCurrentQuestion(index);
-    }
-  };
+  // Removed handleQuestionClick - no jumping via sidebar
 
   const handleSectionSubmit = () => {
     const confirmed = window.confirm(`Are you sure you want to submit the ${subject} section?`);
@@ -172,6 +220,9 @@ const Exam = () => {
       question_id: parseInt(qId),
       chosen_option_id: optionId,
     }));
+
+    // Clear localStorage after submit
+    localStorage.removeItem(localStorageKey);
 
     toast.success(`${subject} section submitted successfully! (${answersArray.length}/${allQuestions.length} answered)`);
     navigate("/overview", {
@@ -192,6 +243,8 @@ const Exam = () => {
       question_id: parseInt(qId),
       chosen_option_id: optionId,
     }));
+    // Clear localStorage after submit
+    localStorage.removeItem(localStorageKey);
     toast.success(`Time up for ${subject}. Auto-saving answers.`);
     navigate("/overview", {
       state: {
@@ -214,6 +267,19 @@ const Exam = () => {
 
   return (
     <>
+      {/* Tab Switch Alert Dialog */}
+      {showAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4 animate-pulse">
+            <div className="flex items-center space-x-2 mb-4">
+              <AlertCircle className="text-red-600 w-5 h-5" />
+              <h3 className="text-lg font-semibold text-red-700">Warning!</h3>
+            </div>
+            <p className="text-red-700 mb-4">Don't switch between tabs.</p>
+          </div>
+        </div>
+      )}
+
       {/* Time Up Alert */}
       {showTimeUpAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -261,13 +327,6 @@ const Exam = () => {
                 </div>
               </div>
 
-              {showAlert && (
-                <div className="mx-auto px-4 py-2 bg-red-100 border border-red-500 rounded-lg animate-pulse flex items-center space-x-2">
-                  <AlertCircle className="text-red-600 w-5 h-5" />
-                  <span className="text-red-700 font-bold text-sm">Don't swtch between tabs.</span>
-                </div>
-              )}
-
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-sm">
                   <Camera size={16} className="text-green-600" />
@@ -287,7 +346,7 @@ const Exam = () => {
 
         {/* Main Content */}
         <div className="flex h-[calc(100vh-73px)]">
-          {/* Left Sidebar - Question Navigation */}
+          {/* Left Sidebar - Question Navigation (now just indicators, no clicking) */}
           <div className="w-80 bg-white border-r overflow-y-auto">
             <div className="p-4">
               <div className="mb-4">
@@ -296,22 +355,20 @@ const Exam = () => {
 
               <div className="grid grid-cols-5 gap-2">
                 {allQuestions.map((q, idx) => (
-                  <button
+                  <div
                     key={q.question_id}
-                    onClick={() => handleQuestionClick(idx)}
-                    disabled={idx < currentQuestion}
                     className={`
-                      p-2 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                      p-2 rounded-lg border-2 transition-all cursor-not-allowed opacity-50
                       ${currentQuestion === idx 
                         ? "border-primary bg-primary text-white" 
                         : answers[q.question_id] 
                           ? "border-green-500 bg-green-50 text-green-700" 
-                          : "border-gray-200 hover:border-gray-300"
+                          : "border-gray-200"
                       }
                     `}
                   >
                     {idx + 1}
-                  </button>
+                  </div>
                 ))}
               </div>
 

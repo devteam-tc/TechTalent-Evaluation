@@ -6,7 +6,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import about from "../assests/About Us.png";
 import techlogo from "../assests/techlogo.png"
+import journery1 from "../assests/1.png"
+import journery2 from "../assests/2.png"
+import journery3 from "../assests/3.png"
+import journery4 from "../assests/4.png"
+import  coding from '../assests/coding.jpg';
+import logo from '../assests/logo.png'
+import charts from '../assests/OIP.jpeg'
 import {
   Select,
   SelectContent,
@@ -247,35 +255,35 @@ const Landing = () => {
       icon: Code,
       title: "Live Coding Challenges",
       description: "Interactive tests that simulate real interview scenarios.",
-      image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+      image: coding
     },
     {
       icon: BarChart3,
       title: "Data-Driven Insights",
       description: "Analytics to identify top talent and streamline hiring decisions.",
-      image: "https://images.unsplash.com/photo-1558618047-3c8c76ca4a5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+      image: charts
     },
   ];
 
   const galleryImages = [
     {
-      src: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-      alt: "Innovative team collaboration",
+      src: journery1,
+      alt: "Start Registration ",
       animation: "fade-in-left"
     },
     {
-      src: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-      alt: "Data analysis dashboard",
+      src: journery2,
+      alt: "Experience platform features",
       animation: "fade-in-right"
     },
     {
-      src: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+      src: journery3,
       alt: "Coding challenge interface",
       animation: "zoom-in"
     },
     {
-      src: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-      alt: "AI assessment tools",
+      src: journery4,
+      alt: "Get hired by top companies",
       animation: "slide-up"
     },
   ];
@@ -313,12 +321,13 @@ const Landing = () => {
         ))}
       </div>
 
-      {/* Enhanced Header with Glassmorphism - Sticky with Subtle Float */}
-      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-white/10 border-b border-white/20 shadow-xl animate-subtle-float">
+      {/* Enhanced Header with Glassmorphism - Sticky with Subtle Float - Adjusted for better background image visibility */}
+      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-white/10 border-b border-white/10 shadow-xl animate-subtle-float">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
+            {/* Left: Logo */}
             <div className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300 group">
-              <img src={techlogo} alt="DevTalent Logo" className="w-32 h-12 object-contain drop-shadow-lg group-hover:rotate-12 transition-transform duration-700" />
+              <img src={logo} alt="DevTalent Logo" className="w-32 h-12 object-contain drop-shadow-lg group-hover:rotate-12 transition-transform duration-700" />
             </div>
             
             {/* Desktop Nav with Glow on Hover */}
@@ -343,33 +352,39 @@ const Landing = () => {
               ))}
             </nav>
 
-            {/* Mobile Menu Button with Spin */}
-            <div className="md:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-foreground hover:text-primary group"
-              >
-                {isMobileMenuOpen ? <X size={24} className="group-hover:rotate-180 transition-transform duration-300" /> : <Menu size={24} className="group-hover:rotate-180 transition-transform duration-300" />}
-              </Button>
-            </div>
-
-            {/* Desktop Login Buttons with Pulse */}
-            <div className="hidden md:flex items-center space-x-2">
-              <div className="hover:scale-105 transition-transform duration-300">
-                <Button onClick={() => setIsLoginOpen(true)} className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
-                  Login
-                </Button>
+            {/* Right: Tech Logo and Buttons */}
+            <div className="flex items-center space-x-2">
+              {/* Right: Tech Logo */}
+              <div className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300 group">
+                <img src={techlogo} alt="Tech Logo" className="w-32 h-12 object-contain drop-shadow-lg group-hover:rotate-12 transition-transform duration-700" />
               </div>
-              <div className="hover:scale-105 transition-transform duration-300">
-                <Button onClick={() => setIsContactOpen(true)} className="bg-gradient-to-r from-green-600 to-green-800 hover:from-green-600/90 hover:to-green-800/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
-                  Contact US
-                </Button>
+              {/* Desktop Login Buttons with Pulse */}
+              <div className="hidden md:flex items-center space-x-2">
+                <div className="hover:scale-105 transition-transform duration-300">
+                  <Button onClick={() => setIsLoginOpen(true)} className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
+                    Login
+                  </Button>
+                </div>
+                <div className="hover:scale-105 transition-transform duration-300">
+                  <Button onClick={() => setIsContactOpen(true)} className="bg-gradient-to-r from-green-600 to-green-800 hover:from-green-600/90 hover:to-green-800/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
+                    Contact US
+                  </Button>
+                </div>
+                <div className="hover:scale-105 transition-transform duration-300">
+                  <Button onClick={() => setIsAdminLoginOpen(true)} className="bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-600/90 hover:to-gray-800/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
+                    Admin Login
+                  </Button>
+                </div>
               </div>
-              <div className="hover:scale-105 transition-transform duration-300">
-                <Button onClick={() => setIsAdminLoginOpen(true)} className="bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-600/90 hover:to-gray-800/90 shadow-lg hover:shadow-xl text-sm px-4 py-2 animate-pulse-subtle">
-                  Admin Login
+              {/* Mobile Menu Button with Spin */}
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="text-foreground hover:text-primary group"
+                >
+                  {isMobileMenuOpen ? <X size={24} className="group-hover:rotate-180 transition-transform duration-300" /> : <Menu size={24} className="group-hover:rotate-180 transition-transform duration-300" />}
                 </Button>
               </div>
             </div>
@@ -436,21 +451,21 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Hero Section with Enhanced Parallax and Typing Effect */}
+      {/* Hero Section with Enhanced Parallax and Typing Effect - Adjusted overlay for better image visibility */}
       <section id="home" className="relative py-8 px-4 overflow-hidden min-h-[60vh] flex items-center justify-center animate-section-reveal">
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-20 animate-parallax-enhanced"
+          className="absolute inset-0 bg-cover bg-center opacity-40 animate-parallax-enhanced" // Increased opacity from 20 to 40 for better visibility
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/80 to-purple-600/80 animate-gradient-shift" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/60 to-purple-600/60 animate-gradient-shift" /> {/* Reduced opacity from 80 to 60 for less darkening */}
         <div className="container mx-auto text-center relative z-10 animate-hero-entrance">
           <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent animate-typewriter">
-            The World's Most Advanced
+            The Most Advanced 
             <br />
-            <span className="text-gradient animate-glow">Interview Assessment Platform</span>
+            <span className="text-gradient animate-glow">Next-Gen Interview Assessment Platform</span>
           </h1>
           <p className="text-lg md:text-2xl text-blue-100 mb-8 max-w-4xl mx-auto animate-fade-in-up stagger-delay">
-            Prepare, practice, and perform your best — anytime, anywhere.
+            Empowering recruiters and students with AI-driven hiring, real-time coding tests and skill-based insights
           </p>
           <div className="animate-bounce-enhanced">
             <Button 
@@ -473,9 +488,8 @@ const Landing = () => {
                 About <span className="text-gradient animate-wave">DevTalent</span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6 animate-fade-in-up stagger-delay">
-                DevTalent is a revolutionary platform designed to transform the interview and assessment process. 
-                Powered by advanced AI and real-time analytics, we empower students, colleges, recruiters, and companies 
-                to discover and develop top talent efficiently and fairly.
+                At Dev Talent, we’re redefining how companies discover, evaluate and hire tech talent.
+Designed to transform the interview and assessment process, our AI-driven platform connects students, colleges and recruiters to make hiring faster, smarter and fairer.
               </p>
               <div className="grid md:grid-cols-2 gap-4 mt-6">
                 <div className="hover:translate-x-2 transition-transform duration-300 group">
@@ -484,7 +498,7 @@ const Landing = () => {
                       <CardTitle className="flex items-center gap-2"><Globe className="w-5 h-5 text-primary group-hover:rotate-360 transition-transform duration-1000" /> Mission</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <CardDescription>To bridge the gap between talent and opportunity through innovative assessment tools.</CardDescription>
+                      <CardDescription>To empower students, developers and recruiters with advanced AI tools that simplify hiring, reduce bias </CardDescription>
                     </CardContent>
                   </Card>
                 </div>
@@ -494,7 +508,8 @@ const Landing = () => {
                       <CardTitle className="flex items-center gap-2"><Brain className="w-5 h-5 text-purple-600 group-hover:rotate-360 transition-transform duration-1000" /> Impact</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <CardDescription>Serving thousands of users worldwide with secure, scalable, and insightful evaluations.</CardDescription>
+                      <CardDescription>Dev Talent is bridging the gap between learning and hiring — empowering thousands of students, educators,recruiters
+</CardDescription>
                     </CardContent>
                   </Card>
                 </div>
@@ -502,7 +517,7 @@ const Landing = () => {
             </div>
             <div className="order-1 lg:order-2 relative hover:scale-105 transition-transform duration-500 group">
               <img 
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
+                src={about}
                 alt="Team collaborating on assessment platform"
                 className="w-full h-[300px] object-cover rounded-2xl shadow-2xl animate-image-float group-hover:rotate-3 transition-transform duration-700"
               />
@@ -535,8 +550,8 @@ const Landing = () => {
             Our <span className="text-gradient animate-wave">Vision</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-in-up stagger-delay">
-            To create a world where every talented individual is discovered and nurtured, eliminating barriers in the hiring process 
-            and fostering a merit-based ecosystem for global innovation.
+            To build the most intelligent hiring ecosystem that connects talent and opportunity through skill-based assessments and innovation — making the hiring process simpler, faster, and smarter
+
           </p>
           <div className="relative mx-auto w-32 h-32 bg-gradient-to-r from-primary to-purple-600 rounded-full flex items-center justify-center shadow-2xl scale-110 animate-pulse-enhanced">
             <Target className="text-white animate-spin-slow" size={40} />
@@ -653,11 +668,11 @@ const Landing = () => {
           </p>
           <div className="max-w-2xl mx-auto relative">
             <div className="relative bg-black rounded-3xl overflow-hidden shadow-2xl animate-border-glow">
-              <div className="absolute z-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white w-20 h-20 opacity-80 hover:opacity-100 transition-all duration-300 cursor-pointer hover:scale-110 animate-spin-subtle">
+              <div className="absolute z-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white w-30 h-20 opacity-80 hover:opacity-100 transition-all duration-300 cursor-pointer hover:scale-110 animate-spin-subtle">
                 <PlayCircle size={80} className="animate-pulse" />
               </div>
               <iframe
-                className="w-full aspect-video"
+                className="w-[20rem] aspect-video"
                 src="https://www.youtube.com/embed/dQw4w9WgXcQ" // Replace with actual demo URL
                 title="DevTalent Demo"
                 frameBorder="0"
@@ -1280,276 +1295,3 @@ const Landing = () => {
 };
 
 export default Landing;
-// import React, { useState, useEffect } from 'react';
-// import { motion, AnimatePresence } from 'framer-motion';
-
-// interface DevTalentComponentProps {
-//   productName?: string;
-//   brandLogo?: string;
-// }
-
-// const DevTalentComponent: React.FC<DevTalentComponentProps> = ({ productName = 'Dev Talent', brandLogo = 'logo.png' }) => {
-//   const [currentScene, setCurrentScene] = useState(1);
-//   const totalScenes = 4;
-//   const sceneDuration = 4000; // 4 seconds per scene
-
-//   useEffect(() => {
-//     const timer = setTimeout(() => {
-//       setCurrentScene((prev) => (prev < totalScenes ? prev + 1 : 1));
-//     }, sceneDuration);
-
-//     return () => clearTimeout(timer);
-//   }, [currentScene]);
-
-//   const containerVariants = {
-//     hidden: { opacity: 0 },
-//     visible: { opacity: 1, transition: { duration: 0.5 } },
-//     exit: { opacity: 0, transition: { duration: 0.5 } }
-//   };
-
-//   const productVariants = {
-//     hidden: { scale: 0, opacity: 0 },
-//     visible: { scale: 1, opacity: 1, transition: { duration: 1, ease: 'easeOut' } }
-//   };
-
-//   const iconVariants = {
-//     hidden: { scale: 0, opacity: 0 },
-//     visible: (i: number) => ({
-//       scale: 1,
-//       opacity: 1,
-//       transition: { delay: i * 0.2, duration: 0.5, ease: 'easeOut' }
-//     })
-//   };
-
-//   const fadeInVariants = {
-//     hidden: { opacity: 0, y: 20 },
-//     visible: (i: number) => ({
-//       opacity: 1,
-//       y: 0,
-//       transition: { delay: i * 0.3, duration: 0.5 }
-//     })
-//   };
-
-//   const slideInVariants = {
-//     hidden: { x: -100, opacity: 0 },
-//     visible: { x: 0, opacity: 1, transition: { duration: 0.6 } }
-//   };
-
-//   const painPoints = [
-//     { name: 'Manual Grading Delays', icon: '⏳' },
-//     { name: 'Cheating Risks', icon: '🚫' },
-//     { name: 'Inaccurate Assessments', icon: '❌' },
-//     { name: 'Scalability Issues', icon: '📈' },
-//     { name: 'Lack of Real-time Insights', icon: '📊' },
-//     { name: 'High Administrative Overhead', icon: '📋' }
-//   ];
-
-//   const solutions = [
-//     { name: 'Automated Grading', icon: '🤖' },
-//     { name: 'Secure Proctoring', icon: '🔒' },
-//     { name: 'AI-Driven Insights', icon: '🧠' },
-//     { name: 'Scalable Platform', icon: '☁️' }
-//   ];
-
-//   return (
-//     <div className="w-screen h-screen flex justify-center items-center font-sans overflow-hidden relative" style={{ background: 'linear-gradient(to bottom, #667eea 0%, #764ba2 100%)' }}>
-//       <AnimatePresence mode="wait">
-//         <motion.div
-//           key={currentScene}
-//           variants={containerVariants}
-//           initial="hidden"
-//           animate="visible"
-//           exit="exit"
-//           className="w-full h-full flex flex-col justify-center items-center p-5 box-border scene"
-//         >
-//           {currentScene === 1 && (
-//             <motion.div className="flex flex-col justify-center items-center" variants={containerVariants}>
-//               <motion.div className="mb-5 product" variants={productVariants}>
-//                 <div className="product-icon">📱</div> {/* Placeholder for Dev Talent platform icon */}
-//               </motion.div>
-//               <motion.div className="books-elements absolute top-1/4 left-1/4 text-6xl opacity-30" animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
-//                 📚 📖 📚
-//               </motion.div>
-//               <motion.div className="books-elements absolute bottom-1/4 right-1/4 text-6xl opacity-30" animate={{ y: [0, 10, 0] }} transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}>
-//                 📖 📚 📖
-//               </motion.div>
-//               <motion.h2 variants={slideInVariants} initial="hidden" animate="visible" className="text-5xl text-white text-center m-0 drop-shadow-lg">
-//                 {productName}
-//               </motion.h2>
-//               <motion.p className="text-xl text-blue-100 text-center mt-2 drop-shadow-md">Revolutionary Exam Platform for Developer Talent</motion.p>
-//             </motion.div>
-//           )}
-
-//           {currentScene === 2 && (
-//             <motion.div className="flex flex-col justify-center items-center" variants={containerVariants}>
-//               <h3 className="text-4xl text-white text-center mb-8 drop-shadow-lg">Common Pain Points</h3>
-//               <div className="pain-points-layout flex flex-col items-center gap-8 w-full max-w-6xl">
-//                 {/* Row 1: 1st pain point + human image on right */}
-//                 <motion.div 
-//                   className="row1 flex items-center justify-center gap-10 w-full flex-col sm:flex-row" 
-//                   initial="hidden" 
-//                   animate="visible" 
-//                   variants={slideInVariants}
-//                 >
-//                   <motion.div
-//                     className="pain-point-item flex flex-col items-center p-6 bg-white/20 rounded-xl shadow-lg min-w-[150px] backdrop-blur-sm"
-//                     variants={fadeInVariants}
-//                     custom={0}
-//                   >
-//                     <div className="icon text-6xl mb-2.5">{painPoints[0].icon}</div>
-//                     <p className="m-0 text-lg text-white text-center">{painPoints[0].name}</p>
-//                   </motion.div>
-//                   <div className="human-image text-8xl">👨‍💻</div>
-//                 </motion.div>
-
-//                 {/* Row 2: 2nd pain point */}
-//                 <motion.div 
-//                   className="row2 flex justify-center" 
-//                   initial="hidden" 
-//                   animate="visible" 
-//                   variants={slideInVariants}
-//                 >
-//                   <motion.div
-//                     className="pain-point-item flex flex-col items-center p-6 bg-white/20 rounded-xl shadow-lg min-w-[150px] backdrop-blur-sm"
-//                     variants={fadeInVariants}
-//                     custom={1}
-//                   >
-//                     <div className="icon text-6xl mb-2.5">{painPoints[1].icon}</div>
-//                     <p className="m-0 text-lg text-white text-center">{painPoints[1].name}</p>
-//                   </motion.div>
-//                 </motion.div>
-
-//                 {/* 6th pain point (top of the next row) */}
-//                 <motion.div 
-//                   className="row6 flex justify-center" 
-//                   initial="hidden" 
-//                   animate="visible" 
-//                   variants={slideInVariants}
-//                 >
-//                   <motion.div
-//                     className="pain-point-item flex flex-col items-center p-6 bg-white/20 rounded-xl shadow-lg min-w-[150px] backdrop-blur-sm"
-//                     variants={fadeInVariants}
-//                     custom={5}
-//                   >
-//                     <div className="icon text-6xl mb-2.5">{painPoints[5].icon}</div>
-//                     <p className="m-0 text-lg text-white text-center">{painPoints[5].name}</p>
-//                   </motion.div>
-//                 </motion.div>
-
-//                 {/* Row for 3rd, 4th, 5th pain points */}
-//                 <motion.div 
-//                   className="row345 flex gap-5 justify-center flex-wrap" 
-//                   initial="hidden" 
-//                   animate="visible" 
-//                   variants={slideInVariants}
-//                 >
-//                   {[2, 3, 4].map((idx) => (
-//                     <motion.div
-//                       key={painPoints[idx].name}
-//                       className="pain-point-item flex flex-col items-center p-6 bg-white/20 rounded-xl shadow-lg min-w-[150px] backdrop-blur-sm"
-//                       variants={fadeInVariants}
-//                       custom={idx}
-//                     >
-//                       <div className="icon text-6xl mb-2.5">{painPoints[idx].icon}</div>
-//                       <p className="m-0 text-lg text-white text-center">{painPoints[idx].name}</p>
-//                     </motion.div>
-//                   ))}
-//                 </motion.div>
-//               </div>
-//             </motion.div>
-//           )}
-
-//           {currentScene === 3 && (
-//             <motion.div className="flex flex-col md:flex-row justify-center items-start p-10 w-full gap-10" variants={containerVariants}>
-//               <div className="left-side flex-1 flex flex-col gap-5 items-center">
-//                 <h3 className="text-4xl text-white self-center drop-shadow-lg">Our Solutions</h3>
-//                 {solutions.map((sol, i) => (
-//                   <motion.div
-//                     key={sol.name}
-//                     className="solution-item flex flex-col items-center p-6 bg-white/20 rounded-xl shadow-lg min-w-[180px] backdrop-blur-sm"
-//                     variants={slideInVariants}
-//                     initial="hidden"
-//                     animate="visible"
-//                     custom={i}
-//                   >
-//                     <div className="icon text-6xl mb-2.5">{sol.icon}</div>
-//                     <p className="m-0 text-lg text-white text-center">{sol.name}</p>
-//                   </motion.div>
-//                 ))}
-//               </div>
-//               <motion.div className="right-side flex-1 flex justify-center items-center" variants={productVariants}>
-//                 <div className="hand-product flex items-center">
-//                   <div className="hand text-8xl mr-2.5 text-white">✋</div>
-//                   <div className="product-icon text-white">📱</div>
-//                 </div>
-//               </motion.div>
-//             </motion.div>
-//           )}
-
-//           {currentScene === 4 && (
-//             <motion.div className="flex flex-col justify-center items-center relative" variants={containerVariants}>
-//               <motion.div className="mb-5 product" variants={productVariants} animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-//                 <div className="product-icon">📱</div>
-//               </motion.div>
-//               <motion.div className="floating-elements absolute top-1/4 left-1/10 text-4xl pointer-events-none z-10 text-white opacity-70" animate={{ y: [-10, 10] }} transition={{ duration: 3, repeat: Infinity, yoyo: true }}>
-//                 <span className="block m-2.5">💻</span>
-//                 <span className="block m-2.5" style={{ animationDelay: '1s' }}>🔍</span>
-//                 <span className="block m-2.5" style={{ animationDelay: '2s' }}>⭐</span>
-//               </motion.div>
-//               <motion.h1 className="tagline text-6xl text-white text-center m-5 font-bold drop-shadow-lg" variants={fadeInVariants} initial="hidden" animate="visible" transition={{ delay: 0.5 }}>
-//                 Assess. Hire. Excel.
-//               </motion.h1>
-//               <motion.div className="cta flex flex-col items-center gap-2.5" variants={fadeInVariants} initial="hidden" animate="visible" transition={{ delay: 1 }}>
-//                 <img src={brandLogo} alt="Brand Logo" className="logo w-25 h-auto filter brightness-0 invert" />
-//                 <p className="text-xl text-blue-100 drop-shadow-md">Discover Top Developer Talent Today.</p>
-//               </motion.div>
-//             </motion.div>
-//           )}
-//         </motion.div>
-//       </AnimatePresence>
-//       <div className="scene-indicator absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/50 text-white px-5 py-2.5 rounded-full text-sm">
-//         Scene {currentScene} of {totalScenes}
-//       </div>
-
-//       <style jsx>{`
-//         .product-icon {
-//           font-size: 100px;
-//           background: rgba(255, 255, 255, 0.2);
-//           width: 150px;
-//           height: 150px;
-//           border-radius: 20px;
-//           display: flex;
-//           align-items: center;
-//           justify-content: center;
-//           color: white;
-//           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-//           backdrop-filter: blur(10px);
-//         }
-//         .floating-elements span {
-//           animation: float 3s ease-in-out infinite;
-//         }
-//         @keyframes float {
-//           0%, 100% { transform: translateY(0px); }
-//           50% { transform: translateY(-10px); }
-//         }
-//         @media (max-width: 768px) {
-//           .flex-row {
-//             flex-direction: column;
-//           }
-//           .pain-points-layout {
-//             gap: 4;
-//           }
-//           .row1, .row345 {
-//             flex-direction: column;
-//             align-items: center;
-//           }
-//           .row345 {
-//             gap: 2.5;
-//           }
-//         }
-//       `}</style>
-//     </div>
-//   );
-// };
-
-// export default DevTalentComponent;

@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Clock, FileText, Trophy, AlertCircle, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
+
 interface ExamPaper {
   attempt_id: number;
   exam_id: number;
@@ -36,6 +37,7 @@ const Overview = () => {
   const [subjectAnswers, setSubjectAnswers] = useState<SubjectAnswers>({});
   const [isLoading, setIsLoading] = useState(true);
   const [autoSubmitTrigger, setAutoSubmitTrigger] = useState(false);
+  const [autoSubmitAt15Min, setAutoSubmitAt15Min] = useState(false);
   const token = localStorage.getItem("userToken");
 
   // Load attemptData stably from localStorage
@@ -139,17 +141,19 @@ const Overview = () => {
       const currentEndsAt = adjustedTimer.getTime();
       const currentTimeLeft = Math.max(0, Math.floor((currentEndsAt - Date.now()) / 1000));
       setTimeLeft(currentTimeLeft);
-      if (currentTimeLeft <= 0) {
+      if (currentTimeLeft <= 15 * 60 && !autoSubmitAt15Min) {
+        setAutoSubmitAt15Min(true);
         clearInterval(timer);
-        // Show alert for time up in the middle
-        if (window.confirm("Time's up! Do you want to submit the exam now?")) {
-          handleFinalSubmit(true); // Auto-submit on time up
-        }
+        handleFinalSubmit(true); // Auto-submit at 15 min
+      } else if (currentTimeLeft <= 0) {
+        clearInterval(timer);
+        // Fallback for time up
+        handleFinalSubmit(true);
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigate, attemptId, token]); // Depend on attemptId instead of attemptData
+  }, [navigate, attemptId, token, autoSubmitAt15Min]); // Depend on attemptId instead of attemptData
 
   // Persist state to localStorage
   useEffect(() => {
@@ -422,14 +426,6 @@ const Overview = () => {
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="px-4 pb-4">
-                        <div className="grid md:grid-cols-2 gap-2">
-                          {subjectQuestions.map((q, idx) => (
-                            <div key={q.question_id} className="p-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md border border-gray-200 text-xs">
-                              <p className="font-medium text-gray-800">Q{idx + 1}</p>
-                              <p className="text-gray-600 line-clamp-2">{q.text}</p>
-                            </div>
-                          ))}
-                        </div>
                         <div className="mt-4">
                           <Button
                             onClick={() => handleStartSubject(subject, subjectQuestions)}
@@ -473,6 +469,10 @@ const Overview = () => {
                 <li className="flex items-start space-x-2">
                   <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
                   <span className="text-gray-700">Auto-submit on timeout—save progress regularly.</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <AlertCircle className="text-orange-500 mt-0.5 flex-shrink-0" size={16} />
+                  <span className="text-gray-700">Once clik on next question we can't go back.</span>
                 </li>
               </ul>
             </CardContent>

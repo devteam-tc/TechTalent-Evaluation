@@ -134,7 +134,7 @@ const Terms = () => {
             <h3 className="text-xl font-bold mb-4 text-center">Already Submitted</h3>
             <p className="mb-4 text-center text-muted-foreground">You have already submitted this exam.</p>
             <Button 
-              onClick={() => navigate("/success")} 
+              onClick={() => navigate("/")} 
               className="w-full"
             >
               Go to Success Page
