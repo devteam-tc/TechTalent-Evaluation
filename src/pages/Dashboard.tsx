@@ -1,7 +1,7 @@
-
-
 import React, { useState, useEffect, Key, useRef } from "react";
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import Devlogo from "../assests/Devlogo.png";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +22,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import html2canvas from "html2canvas";
 import { Eye, EyeOff } from "lucide-react";
 
 interface Student {
@@ -38,7 +37,7 @@ interface Student {
   city: string;
   created: string | null;
   passedout_year?: string;
-  interest?: "technical" | "nontechnical" | string;
+  interests?: string[];
 }
 
 interface Exam {
@@ -74,6 +73,7 @@ interface Result {
   submittedAt: string;
   breakdown: Breakdown[];
   isShortlisted: boolean;
+  college_name?: string;
 }
 
 interface College {
@@ -147,6 +147,7 @@ const Dashboard: React.FC = () => {
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkFileName, setBulkFileName] = useState<string>("");
   const previousBulkFileRef = useRef<File | null>(null);
+  const codingReportRef = useRef<HTMLDivElement>(null);
   const [individualExamId, setIndividualExamId] = useState<string>("");
   const [questionText, setQuestionText] = useState<string>("");
   const [individualOptions, setIndividualOptions] = useState<string[]>([
@@ -158,6 +159,7 @@ const Dashboard: React.FC = () => {
   const [selectedCorrectIndex, setSelectedCorrectIndex] = useState<string>("");
   const [subjectName, setSubjectName] = useState<string>("");
   const [exams, setExams] = useState<Exam[]>([]);
+  const [recentExam, setRecentExam] = useState<Exam | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
   const [results, setResults] = useState<Result[]>([]);
@@ -238,16 +240,23 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
         "https://api.devtalent.securxperts.com:8000/admin/registrations",
+        // "http://192.168.0.107:8000/admin/registrations",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
       if (response.ok) {
         const data = await response.json();
-        const processedData = Array.isArray(data) ? data.map((student: any) => ({
-          ...student,
-          interest: student.interest || student.interest_type || student.stream || ""
-        })) : [];
+        const processedData = Array.isArray(data)
+          ? data.map((student: any) => ({
+              ...student,
+              interest:
+                student.interest ||
+                student.interest_type ||
+                student.stream ||
+                "",
+            }))
+          : [];
         setStudents(processedData);
       } else {
         toast.error("Failed to fetch students");
@@ -268,7 +277,17 @@ const Dashboard: React.FC = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        setColleges(data);
+
+        // Sort colleges by ID in descending order (newest first)
+        const sortedData = Array.isArray(data)
+          ? [...data].sort((a, b) => {
+              const idA = Number(a.id);
+              const idB = Number(b.id);
+              return idB - idA; // Descending order
+            })
+          : data;
+
+        setColleges(sortedData);
       } else {
         toast.error("Failed to fetch colleges");
       }
@@ -288,10 +307,12 @@ const Dashboard: React.FC = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        const processedData = Array.isArray(data) ? data.map((item: any) => ({
-          ...item,
-          passedout_year: item.passedout_year || item.year || ""
-        })) : [];
+        const processedData = Array.isArray(data)
+          ? data.map((item: any) => ({
+              ...item,
+              passedout_year: item.passedout_year || item.year || "",
+            }))
+          : [];
         setContactStudents(processedData);
       } else {
         toast.error("Failed to fetch contact students");
@@ -395,6 +416,7 @@ const Dashboard: React.FC = () => {
             a.submitted_at || a.submittedAt || new Date().toISOString(),
           breakdown,
           isShortlisted,
+          college_name: a.college_name,
         };
       });
 
@@ -410,7 +432,7 @@ const Dashboard: React.FC = () => {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        "https://api.devtalent.securxperts.com:8000/compiler-questions/",
+        "https://api.devtalent.securxperts.com:8000/compiler-questions/total/",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -433,9 +455,11 @@ const Dashboard: React.FC = () => {
           candidate_id: item.candidate_id || item.user_id || "-",
           college_name: item.college_name || item.college || "-",
           exam_id: item.exam_id || "-",
+          exam_title: item.exam_title || "Coding Exam",
           total_marks: item.total_marks ?? item.score ?? 0,
           percentage: percentage,
           status: percentage >= 60 ? "Passed" : "Failed",
+          submited_at: item.submited_at || item.submitted_at || "",
         };
       });
 
@@ -447,27 +471,46 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Student Results", 14, 20);
-    let y = 30;
-    results.forEach((result, index) => {
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setFontSize(10);
-      doc.text(
-        `${index + 1}. ${result.studentName} | Score: ${result.score}/${result.total} | ${result.percentage}% | ${result.isShortlisted ? "Shortlisted" : "Not Shortlisted"}`,
-        14,
-        y,
-      );
-      y += 7;
+  const downloadPDF = async () => {
+    if (!reportRef.current) return;
+
+    const canvas = await html2canvas(reportRef.current, {
+      scale: 2,
     });
-    doc.save("student_results.pdf");
-    toast.success("PDF downloaded successfully!");
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const imgWidth = 210;
+    const pageHeight = 295;
+
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+    pdf.save("exam-performance-report.pdf");
   };
+
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const filteredResults = results.filter((result) => {
+    if (!selectedResultCollege) return true;
+    const exam = exams.find((e) => e.id === result.examId);
+    return exam?.college_name === selectedResultCollege;
+  });
+
+  const shortlistedCount = filteredResults.filter(
+    (r) => r.isShortlisted,
+  ).length;
+
+  const avgPercentage =
+    filteredResults.length > 0
+      ? Math.round(
+          filteredResults.reduce((sum, r) => sum + r.percentage, 0) /
+            filteredResults.length,
+        )
+      : 0;
 
   const getCurrentDateTime = () => {
     const now = new Date();
@@ -482,19 +525,23 @@ const Dashboard: React.FC = () => {
       student.stream ||
       student.category ||
       student.preference ||
-      student.tech_interest;   // try all likely keys
+      "";
 
-    if (!interest || interest === "") return "Not Specified";
+    if (!interest) return "Not Specified";
 
     const normalized = String(interest).toLowerCase().trim();
 
-    if (normalized.includes("tech")) return "Technical";
-    if (normalized.includes("non")) return "Non-Technical";
+    // ✅ Check NON first
+    if (normalized === "non-technical" || normalized.includes("non")) {
+      return "Non-Technical";
+    }
+
+    if (normalized === "technical" || normalized.includes("tech")) {
+      return "Technical";
+    }
 
     return interest;
   };
-
-
 
   const resetExamForm = () => {
     setExamData({
@@ -510,6 +557,23 @@ const Dashboard: React.FC = () => {
     setSelectedExamCollegeName("");
     setIsEditExamMode(false);
     setEditingExam(null);
+  };
+
+  const downloadCodingPDF = async () => {
+    if (!codingReportRef.current) return;
+
+    const canvas = await html2canvas(codingReportRef.current, { scale: 2 });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+    pdf.save("coding-exam-report.pdf");
   };
 
   const handleCreateExamSubmit = async (e: React.FormEvent) => {
@@ -534,6 +598,26 @@ const Dashboard: React.FC = () => {
       toast.error("Please add at least one valid subject!");
       return;
     }
+
+    // Check if this is an edit mode and subjects have changed
+    if (isEditExamMode && editingExam) {
+      const originalSubjects = editingExam.subjects || [];
+      const subjectsChanged =
+        JSON.stringify(originalSubjects.sort()) !==
+        JSON.stringify(subjects.sort());
+
+      console.log("Edit mode validation:");
+      console.log("Original subjects:", originalSubjects);
+      console.log("Current subjects:", subjects);
+      console.log("Subjects changed:", subjectsChanged);
+
+      if (subjectsChanged) {
+        toast.error(
+          "Cannot replace subjects after questions are added. Please create a new exam if you need different subjects.",
+        );
+        return;
+      }
+    }
     try {
       const token = localStorage.getItem("adminToken");
       const url = isEditExamMode
@@ -546,10 +630,13 @@ const Dashboard: React.FC = () => {
         window_end: new Date(examData.window_end).toISOString(),
         duration_minutes: parseInt(examData.duration_minutes.toString()),
         is_active: examData.is_active ?? true,
-        subjects: subjects,
         category: examData.category,
         college_name: selectedExamCollegeName,
       };
+      // Only include subjects when creating a new exam, not when updating
+      if (!isEditExamMode) {
+        payload.subjects = subjects;
+      }
       const response = await fetch(url, {
         method: isEditExamMode ? "PUT" : "POST",
         headers: {
@@ -559,17 +646,34 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify(payload),
       });
       if (response.ok) {
+        const newExam = {
+          id: Date.now().toString(), // Convert to string
+          title: examData.title.trim(),
+          description: examData.description.trim() || "",
+          window_start: new Date(examData.window_start).toISOString(),
+          window_end: new Date(examData.window_end).toISOString(),
+          duration_minutes: parseInt(examData.duration_minutes.toString()),
+          is_active: examData.is_active ?? true,
+          subjects: subjects,
+          category: examData.category,
+          college_name: selectedExamCollegeName,
+        };
+
         toast.success(
           isEditExamMode
             ? "Exam updated successfully!"
             : "Exam created successfully!",
         );
+        setRecentExam(newExam); // Set recent exam for display
         setIsCreateExamOpen(false);
         resetExamForm();
         fetchExams();
       } else {
         const err = await response.json().catch(() => ({}));
-        toast.error(err.detail || err.message || "Failed to save exam");
+        console.error("Backend error response:", err);
+        const errorMessage =
+          err.detail || err.message || err.error || "Failed to save exam";
+        toast.error(errorMessage);
       }
     } catch (error) {
       toast.error("Network error. Please try again.");
@@ -717,6 +821,7 @@ const Dashboard: React.FC = () => {
         toast.error(err.detail || "Failed to add question.");
       }
     } catch (error) {
+      
       toast.error("Network error.");
     }
   };
@@ -908,10 +1013,11 @@ const Dashboard: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveSection(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeSection === tab.id
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeSection === tab.id
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
               >
                 {tab.label}
               </button>
@@ -923,9 +1029,7 @@ const Dashboard: React.FC = () => {
         {activeSection === 1 && (
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
-                Students List
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Students List</h2>
             </div>
             <div className="px-6 py-3">
               <Input
@@ -1016,38 +1120,26 @@ const Dashboard: React.FC = () => {
                           {student.state}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span
-                            className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${String(
-                              student.interest ||
-                              // student.interest_type ||
-                              // student.stream ||
-                              // student.category ||
-                              // student.preference ||
-                              // student.tech_interest ||
-                              ""
-                            )
-                              .toLowerCase()
-                              .includes("tech")
-                              ? "bg-green-100 text-green-800"
-                              : String(
-                                student.interest ||
-                                // student.interest_type ||
-                                // student.stream ||
-                                // student.category ||
-                                // student.preference ||
-                                // student.tech_interest ||
-                                ""
-                              )
-                                .toLowerCase()
-                                .includes("non")
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-700"
-                              }`}
-                          >
-                            {formatInterest(student)}
-                          </span>
+                          {(() => {
+                            const interest =
+                              formatInterest(student).toLowerCase();
 
+                            let style = "bg-gray-100 text-gray-700";
 
+                            if (interest === "non-technical") {
+                              style = "bg-blue-100 text-blue-800";
+                            } else if (interest === "technical") {
+                              style = "bg-green-100 text-green-800";
+                            }
+
+                            return (
+                              <span
+                                className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${style}`}
+                              >
+                                {formatInterest(student)}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
@@ -1070,7 +1162,9 @@ const Dashboard: React.FC = () => {
         {activeSection === 2 && (
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <h2 className="text-xl font-bold text-gray-900">Exams List (MCQ)</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                Exams List (MCQ)
+              </h2>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center">
                   <select
@@ -1109,6 +1203,29 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Recent Exam Alert */}
+            {recentExam && (
+              <div className="mx-6 mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-800 mb-1">
+                      🎉 New Exam Added Successfully!
+                    </h3>
+                    <p className="text-green-700">
+                      <strong>{recentExam.title}</strong> has been created and
+                      is now available.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRecentExam(null)}
+                    className="text-green-600 hover:text-green-800 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -1122,6 +1239,10 @@ const Dashboard: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       College Name
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Window Start
                     </th>
@@ -1137,7 +1258,8 @@ const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {exams
+                  {[...exams]
+                    .sort((a, b) => Number(b.id) - Number(a.id)) // newest first
                     .filter(
                       (exam) =>
                         !selectedCollege ||
@@ -1153,6 +1275,9 @@ const Dashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {exam.college_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {exam.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {exam.window_start.replace("T", ", ")}
@@ -1189,7 +1314,9 @@ const Dashboard: React.FC = () => {
         {activeSection === 3 && (
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-bold text-gray-900">MCQ Exam Performance</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                MCQ Exam Performance
+              </h2>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
                 <div className="flex items-center gap-3">
                   <select
@@ -1285,10 +1412,10 @@ const Dashboard: React.FC = () => {
                                 : "hover:bg-gray-50"
                             }
                           >
-                            <td className="px-6 py-4 text-sm font-medium">
+                            <td className="px-6 py-4 text-sm ">
                               {result.studentId}
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium">
+                            <td className="px-6 py-4 text-sm">
                               {result.studentName}
                             </td>
                             <td className="px-6 py-4 text-sm">
@@ -1299,9 +1426,9 @@ const Dashboard: React.FC = () => {
                             </td>
 
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {exam?.college_name || "-"}
+                              {result.college_name || "-"}
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium">
+                            <td className="px-6 py-4 text-sm">
                               {result.score} / {result.total}
                             </td>
                             <td className="px-6 py-4 text-sm font-bold text-indigo-600">
@@ -1317,7 +1444,10 @@ const Dashboard: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {new Date(result.submittedAt).toLocaleString()}
+                              {new Date(result.submittedAt).toLocaleString(
+                                "en-IN",
+                                { timeZone: "Asia/Kolkata" },
+                              )}
                             </td>
                           </tr>
                         );
@@ -1349,33 +1479,7 @@ const Dashboard: React.FC = () => {
                   {isRefreshingResults ? "Refreshing..." : "Refresh"}
                 </Button>
 
-                <Button
-                  onClick={() => {
-                    const tableElement = document.querySelector(
-                      "#coding-results-table",
-                    );
-                    if (!tableElement) return;
-                    html2canvas(tableElement as HTMLElement, { scale: 2 }).then(
-                      (canvas) => {
-                        const imgData = canvas.toDataURL("image/png");
-                        const pdf = new jsPDF("l", "mm", "a4");
-                        const imgWidth = pdf.internal.pageSize.getWidth() - 20;
-                        const imgHeight =
-                          (canvas.height * imgWidth) / canvas.width;
-                        pdf.addImage(
-                          imgData,
-                          "PNG",
-                          10,
-                          10,
-                          imgWidth,
-                          imgHeight,
-                        );
-                        pdf.save("coding-results.pdf");
-                      },
-                    );
-                  }}
-                  variant="outline"
-                >
+                <Button onClick={downloadCodingPDF} variant="outline">
                   Download PDF
                 </Button>
               </div>
@@ -1395,14 +1499,13 @@ const Dashboard: React.FC = () => {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Exam ID
-                    </th>  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    </th>{" "}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Exam Title
                     </th>
-
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       College Name
                     </th>
-
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total marks
                     </th>
@@ -1436,9 +1539,7 @@ const Dashboard: React.FC = () => {
                         <tr
                           key={item.id || item.attempt_id || index}
                           className={
-                            isPassed
-                              ? "bg-green-50"
-                              : "hover:bg-gray-50"
+                            isPassed ? "bg-green-50" : "hover:bg-gray-50"
                           }
                         >
                           <td className="px-6 py-4 text-sm">
@@ -1458,7 +1559,17 @@ const Dashboard: React.FC = () => {
                           </td>
 
                           <td className="px-6 py-4 text-sm">
-                            {item.total_marks || "-"}
+                            {(() => {
+                              console.log(
+                                "total_marks debug:",
+                                item.total_marks,
+                                typeof item.total_marks,
+                              );
+                              return item.total_marks !== null &&
+                                item.total_marks !== undefined
+                                ? item.total_marks
+                                : "-";
+                            })()}
                           </td>
                           <td className="px-6 py-4 text-sm font-medium">
                             <span
@@ -1471,10 +1582,11 @@ const Dashboard: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${isPassed
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                                }`}
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                                isPassed
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
                             >
                               {isPassed ? "Shortlisted" : "Not Shortlisted"}
                             </span>
@@ -1495,9 +1607,7 @@ const Dashboard: React.FC = () => {
         {activeSection === 4 && (
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">
-                College List
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">College List</h2>
               <Button
                 onClick={() => {
                   setIsEditMode(false);
@@ -1564,7 +1674,7 @@ const Dashboard: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {college.id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {college.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1608,7 +1718,7 @@ const Dashboard: React.FC = () => {
           <section className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-8">
-                Student Requests
+                Individual Student
               </h2>
               <div className="space-y-12">
                 {/* Student Contacts */}
@@ -1641,7 +1751,6 @@ const Dashboard: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Phone
                         </th>
-
                       </tr>
                     </thead>
 
@@ -1683,7 +1792,6 @@ const Dashboard: React.FC = () => {
                             <td className="px-4 py-4 text-sm text-gray-600">
                               {contact.phone}
                             </td>
-
                           </tr>
                         ))
                       )}
@@ -1694,7 +1802,7 @@ const Dashboard: React.FC = () => {
                 {/* College Contacts */}
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-3">
-                    College Contacts
+                    College Student
                   </h2>
                   <div className="overflow-x-auto border border-red-600 rounded-lg">
                     <table className="w-full table-fixed divide-y divide-red-600">
@@ -1773,7 +1881,7 @@ const Dashboard: React.FC = () => {
                 {/* Recruiter Contacts */}
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-3">
-                    Recruiter Contacts
+                    Company Recruiter
                   </h2>
                   <div className="overflow-x-auto border border-green-600 rounded-lg">
                     <table className="w-full table-fixed divide-y divide-green-600">
@@ -2204,9 +2312,54 @@ const Dashboard: React.FC = () => {
                   <Input
                     key={bulkExamId} // Force re-render when exam changes
                     type="file"
-                    accept=".xlsx,.csv"
+                    accept=".xlsx,.xls"
                     onChange={(e) => {
                       const file = e.target.files?.[0] || null;
+
+                      // Validate file type
+                      if (file) {
+                        const allowedExtensions = [".xlsx", ".xls"];
+                        const fileName = file.name.toLowerCase();
+                        const isValidExtension = allowedExtensions.some((ext) =>
+                          fileName.endsWith(ext),
+                        );
+
+                        if (!isValidExtension) {
+                          const fileExtension =
+                            fileName.split(".").pop() || "unknown";
+                          alert(
+                            `Invalid file format: "${fileExtension}". Please upload only Excel files (.xlsx, .xls)`,
+                          );
+                          e.target.value = ""; // Clear the input
+                          setBulkFile(null);
+                          setBulkFileName("");
+                          return;
+                        }
+
+                        // Additional validation: check file size (max 10MB)
+                        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                        if (file.size > maxSize) {
+                          alert(
+                            "File size too large! Please upload files smaller than 10MB",
+                          );
+                          e.target.value = ""; // Clear the input
+                          setBulkFile(null);
+                          setBulkFileName("");
+                          return;
+                        }
+
+                        // Validate that it's actually a file (not a folder/directory)
+                        if (file.type && !file.name.includes(".")) {
+                          alert(
+                            "Invalid file! Please select a proper Excel file",
+                          );
+                          e.target.value = ""; // Clear the input
+                          setBulkFile(null);
+                          setBulkFileName("");
+                          return;
+                        }
+                      }
+
                       setBulkFile(file);
                       setBulkFileName(file ? file.name : "");
                     }}
@@ -2221,12 +2374,10 @@ const Dashboard: React.FC = () => {
   hover:file:bg-indigo-100
 "
                   />
-                  {bulkFileName && (
-                    <p className="mt-3 text-sm text-green-600">
-                      Selected file:{" "}
-                      <span className="font-medium">{bulkFileName}</span>
-                    </p>
-                  )}
+                  <p className="mt-2 text-xs text-gray-500">
+                    Only Excel files (.xlsx, .xls) are accepted. Max file size:
+                    10MB
+                  </p>
                 </div>
               </div>
               <Button type="submit" className="w-full">
@@ -2326,6 +2477,299 @@ const Dashboard: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="fixed left-[-9999px] top-0">
+        <div ref={reportRef} className="bg-white p-8 w-[1100px] font-sans">
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 mb-6"></div>
+
+          {/* Header */}
+          <div className="relative border-b pb-6 mb-6 flex items-center">
+            {/* Left Logo */}
+            <div className="absolute left-0 flex items-center gap-4">
+              <img src={Devlogo} alt="DevTalent" className="w-16 h-16" />
+            </div>
+
+            {/* Center Title */}
+            <div className="w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 tracking-wide">
+                MCQ Exam Performance Report
+              </h1>
+
+              <p className="text-gray-500 text-sm mt-1">
+                Candidate Performance Summary
+              </p>
+            </div>
+
+            {/* Right Info */}
+            <div className="absolute right-0 text-sm text-gray-500 text-right">
+              <div>Generated: {new Date().toLocaleDateString()}</div>
+              <div>By: Admin — HR Team</div>
+            </div>
+          </div>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {filteredResults.length}
+              </div>
+              <div className="text-gray-600 text-sm">Total Candidates</div>
+            </div>
+
+            <div className="bg-purple-50 border border-purple-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {avgPercentage}%
+              </div>
+              <div className="text-gray-600 text-sm">Average Percentage</div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {shortlistedCount}
+              </div>
+              <div className="text-gray-600 text-sm">Shortlisted</div>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-5 bg-indigo-500 rounded"></div>
+
+              <h2 className="font-semibold text-gray-700 mb-3">
+                Candidate Results
+              </h2>
+            </div>
+
+            <div className="text-sm text-gray-400">
+              Showing {filteredResults.length} records
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-sm border">
+            <thead className="bg-gray-100 text-gray-600">
+              <tr>
+                <th className="p-2 text-left">Student ID</th>
+                <th className="p-2 text-left">Student Name</th>
+                <th className="p-2 text-left">Exam ID</th>
+                <th className="p-2 text-left">Exam Title</th>
+                <th className="p-2 text-left">College</th>
+                <th className="p-2 text-left">Marks</th>
+                <th className="p-2 text-left">Percentage</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-left">Submitted</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredResults.map((r, i) => (
+                <tr key={i} className="border-t">
+                  <td className="p-2 text-blue-600">{r.studentId}</td>
+                  <td className="p-2">{r.studentName}</td>
+                  <td className="p-2 text-purple-600">{r.examId}</td>
+                  <td className="p-2">{r.exam_title}</td>
+                  <td className="p-2">{r.college_name}</td>
+                  <td className="p-2">
+                    {r.score}/{r.total}
+                  </td>
+                  <td className="p-2">
+                    <div className="font-semibold">{r.percentage}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                      <div
+                        className={`h-2 rounded-full ${
+                          r.percentage >= 60
+                            ? "bg-green-500"
+                            : r.percentage >= 40
+                              ? "bg-orange-500"
+                              : "bg-red-500"
+                        }`}
+                        style={{ width: `${Math.min(r.percentage, 100)}%` }}
+                      ></div>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-semibold ${
+                        r.isShortlisted
+                          ? "bg-green-100 text-green-800"
+                          : r.percentage >= 40
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {r.isShortlisted
+                        ? "Shortlisted"
+                        : r.percentage >= 40
+                          ? "Pending"
+                          : "Not Shortlisted"}
+                    </span>
+                  </td>
+                  <td className="p-2">
+                    {new Date(r.submittedAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer */}
+          <div className="mt-8 text-xs text-gray-400 flex justify-between">
+            <div>Confidential — Internal Use Only</div>
+            <div>Page 1</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="fixed left-[-9999px] top-0">
+        <div
+          ref={codingReportRef}
+          className="bg-white p-10 w-[1100px] font-sans"
+        >
+          {/* TOP GRADIENT LINE */}
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 mb-6"></div>
+
+          {/* HEADER */}
+          <div className="relative flex items-center pb-5 border-b border-gray-300">
+            {/* Logo - left */}
+            <div className="absolute left-0 flex items-center gap-4">
+              <img src={Devlogo} alt="DevTalent" className="w-16 h-16" />
+            </div>
+
+            {/* Center Title */}
+            <div className="w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 tracking-wide">
+                Coding Exam Performance Report
+              </h1>
+
+              <p className="text-gray-500 text-sm mt-1">
+                Candidate Performance Summary
+              </p>
+            </div>
+
+            {/* Right Info */}
+            <div className="absolute right-0 text-sm text-gray-500 text-right">
+              <div>Generated: {new Date().toLocaleDateString()}</div>
+              <div>By: Admin — HR Team</div>
+            </div>
+          </div>
+
+          {/* STATS CARDS */}
+          <div className="grid grid-cols-3 gap-6 mt-6 mb-6">
+            <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {codingResults.length}
+              </div>
+              <div className="text-sm text-gray-600">Total Candidates</div>
+            </div>
+
+            <div className="bg-purple-50 border border-purple-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {codingResults.length > 0
+                  ? Math.round(
+                      codingResults.reduce((a, b) => a + b.percentage, 0) /
+                        codingResults.length,
+                    )
+                  : 0}
+                %
+              </div>
+              <div className="text-sm text-gray-600">Average Percentage</div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-5 rounded-xl text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {codingResults.filter((r) => r.percentage >= 60).length}
+              </div>
+              <div className="text-sm text-gray-600">Shortlisted</div>
+            </div>
+          </div>
+
+          {/* CANDIDATE RESULTS HEADER */}
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-5 bg-indigo-500 rounded"></div>
+
+              <h2 className="font-semibold text-gray-700 mb-3">
+                Candidate Results
+              </h2>
+            </div>
+
+            <div className="text-sm text-gray-400">
+              Showing {codingResults.length} records
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <table className="w-full text-sm border border-gray-200">
+            <thead className="bg-gray-100 text-gray-600">
+              <tr>
+                <th className="p-3 text-left">Student ID</th>
+                <th className="p-3 text-left">Student Name</th>
+                <th className="p-3 text-left">Exam ID</th>
+                <th className="p-3 text-left">Exam Title</th>
+                <th className="p-3 text-left">College</th>
+                <th className="p-3 text-left">Total Marks</th>
+                <th className="p-3 text-left">Percentage</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-left">Submitted</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {codingResults.map((r, i) => (
+                <tr key={i} className="border-t">
+                  <td className="p-3 text-blue-600">{r.candidate_id}</td>
+                  <td className="p-3">{r.candidate_name}</td>
+                  <td className="p-3 text-purple-600">{r.exam_id}</td>
+                  <td className="p-3">{r.exam_title}</td>
+                  <td className="p-3">{r.college_name}</td>
+                  <td className="p-3 font-bold">{r.total_marks}</td>
+                  <td className="p-3">
+                    <div className="font-semibold">{r.percentage}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          r.percentage >= 60
+                            ? "bg-green-500"
+                            : r.percentage >= 40
+                              ? "bg-orange-500"
+                              : "bg-red-500"
+                        }`}
+                        style={{ width: `${Math.min(r.percentage, 100)}%` }}
+                      ></div>
+                    </div>
+                  </td>
+
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-2 rounded text-xs font-semibold ${
+                        r.percentage >= 60
+                          ? "bg-green-100 text-green-800"
+                          : r.percentage >= 40
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {r.percentage >= 60
+                        ? "Shortlisted"
+                        : r.percentage >= 40
+                          ? "Pending"
+                          : "Not Shortlisted"}
+                    </span>
+                  </td>
+
+                  <td className="p-3">{r.submited_at}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* FOOTER */}
+          <div className="mt-16 text-xs text-gray-400 flex justify-between">
+            <div>🔒 Confidential — Internal Use Only</div>
+
+            <div>Page 1</div>
+          </div>
+        </div>
       </div>
     </div>
   );

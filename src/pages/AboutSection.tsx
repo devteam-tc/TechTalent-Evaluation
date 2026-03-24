@@ -1,85 +1,61 @@
-import { Globe, Brain } from "lucide-react";
-import about1 from "../assests/about1.png";
-import about2 from "../assests/about2.png";
-import about3 from "../assests/about3.png";
-import about4 from "../assests/about4.png";
+import { useNavigate } from "react-router-dom";
 
-interface AboutSectionProps { }
+const AboutSection = () => {
+  const navigate = useNavigate(); // ✅ add this
 
-const AboutSection: React.FC<AboutSectionProps> = () => {
   return (
-    <section id="about" className="py-4 sm:py-16 md:py-4 bg-white w-full overflow-x-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-full">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-          <div className="relative order-2 lg:order-1">
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 p-6 sm:p-8 lg:p-12 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl sm:rounded-3xl border-2 sm:border-4 border-[#961BAC] shadow-xl sm:shadow-2xl">
-              <img
-                src={about1}
-                alt="AI Assessment"
-                className="w-full rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-lg sm:shadow-xl"
-              />
-              <img
-                src={about2}
-                alt="Coding"
-                className="w-full rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-lg sm:shadow-xl"
-              />
-              <img
-                src={about3}
-                alt="Brain AI"
-                className="w-full rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-lg sm:shadow-xl"
-              />
-              <img
-                src={about4}
-                alt="Analytics"
-                className="w-full rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-lg sm:shadow-xl"
-              />
-            </div>
+    <section id="about-us" className="pt-20 pb-10 bg-white">
+      <div className="container mx-auto px-6">
+        {/* First Section - Normal Layout */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
+          {/* Left side - Content */}
+          <div className="space-y-6">
+            <h2 className="font-inter text-3xl md:text-4xl lg:text-[3.5rem] font-bold text-[#6F24A6]">
+              About US
+            </h2>
+            <h3 className="font-inter font-semibold text-[1.5rem] md:text-[2rem] lg:text-[2.666rem] leading-tight md:leading-snug lg:leading-[3.865rem] text-[#111] capitalize lg:w-[35rem]">
+              Empowering Smarter Hiring Through Skill-First Assessments
+            </h3>
+            <p className="text-[1rem] text-[#4B5563] leading-relaxed max-w-2xl">
+              DevTalent is transforming how organizations discover, evaluate and
+              hire technical talent. Our AI-powered platform streamlines
+              interviews, coding assessments and workforce evaluation, enabling
+              recruiters, educational institutions and enterprises to make
+              faster, data-driven and unbiased hiring decisions.
+            </p>
+            <button
+              onClick={() => navigate("/login")}
+              className="flex items-center gap-[0.666rem] px-[1.333rem] py-[1.066rem] w-[8.48rem] h-[3.47rem] text-white rounded-[0.533rem] bg-gradient-to-b from-[#6F24A6] to-[#3D309E]"
+            >
+              Join Us <span className="text-xl">→</span>
+            </button>
           </div>
 
-          <div className="space-y-6 sm:space-y-8 order-1 lg:order-2">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#33329C]">
-              About DevTalent
-            </h2>
-            <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-              At DevTalent, we're redefining how companies discover, evaluate
-              and hire tech talent. Designed to transform the interview and
-              assessment process, our AI-driven platform connects students,
-              colleges and recruiters to make hiring faster, smarter and
-              fairer.
-            </p>
+          {/* Right side - Images */}
 
-            <div className="space-y-4 sm:space-y-6 mt-6 sm:mt-8 lg:mt-10">
-              <div className="flex items-start gap-3 sm:gap-5">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#961BAC] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Globe className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-[#33329C] mb-2">
-                    Vision
-                  </h3>
-                  <p className="text-gray-700 text-sm sm:text-base">
-                    To empower students, developers and recruiters with
-                    advanced AI tools that simplify hiring, reduce bias and
-                    ensure fair opportunities for all.
-                  </p>
-                </div>
-              </div>
+          <div className="relative flex justify-center items-center">
+            {/* BACKGROUND CARD (behind both images) */}
+            <div className="relative bg-[#F2F2F2] rounded-[1rem] w-[20rem] h-[18rem] lg:w-[31.58rem] lg:h-[28rem]">
+              {/* TOP IMAGE */}
+              <img
+                src="/img/Rectangle 14.svg"
+                alt="Team Work"
+                className="absolute
+                 w-[16rem] h-[10rem] left-[10%] top-[-1rem]
+                 lg:w-[25rem] lg:h-[16rem] lg:left-[28%] lg:top-[-2rem]
+                 object-cover rounded-[0.666rem] shadow-xl"
+              />
 
-              <div className="flex items-start gap-3 sm:gap-5">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#961BAC] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Brain className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-[#33329C] mb-2">
-                    Impact
-                  </h3>
-                  <p className="text-gray-700 text-sm sm:text-base">
-                    DevTalent is bridging the gap between learning and hiring
-                    — empowering thousands of students, educators, and
-                    recruiters worldwide.
-                  </p>
-                </div>
-              </div>
+              {/* BOTTOM IMAGE */}
+              <img
+                src="/img/Rectangle 13.svg"
+                alt="Class Room"
+                className="absolute bottom-[-2rem] left-[-1rem]
+                 w-[16rem] h-[10rem]
+                 lg:-bottom-[3.5rem] lg:-left-20
+                 lg:w-[25rem] lg:h-[16rem]
+                 object-cover rounded-[0.666rem] shadow-xl"
+              />
             </div>
           </div>
         </div>

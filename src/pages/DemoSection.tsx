@@ -1,4 +1,4 @@
-interface DemoSectionProps { }
+interface DemoSectionProps {}
 
 const DemoSection: React.FC<DemoSectionProps> = () => {
   return (

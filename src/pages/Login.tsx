@@ -107,18 +107,18 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#efe8ff] to-white flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 overflow-x-hidden">
-
       <div className="w-full max-w-6xl xl:max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-0 relative">
-
         {/* LEFT SECTION */}
         <div className="w-full lg:w-auto lg:max-w-[460px] flex-shrink-0 mx-auto lg:mx-0">
-
           {/* Logo */}
-          <img src={logo} alt="DevTalent" className="h-12 sm:h-14 md:h-16 lg:h-20 mb-4 sm:mb-6 lg:mb-8 mx-auto lg:ml-3" />
+          <img
+            src={logo}
+            alt="DevTalent"
+            className="h-12 sm:h-14 md:h-16 lg:h-20 mb-4 sm:mb-6 lg:mb-8 mx-auto lg:ml-3"
+          />
 
           {/* Login Card */}
           <div className="bg-white rounded-[12px] sm:rounded-[16px] lg:rounded-[18px] shadow-lg sm:shadow-xl px-4 sm:px-5 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6 lg:py-8 w-full max-w-md mx-auto lg:mx-0 lg:w-auto">
-
             {/* Header */}
             <div className="flex items-center gap-2 text-[#7B2CBF] font-semibold text-lg sm:text-xl">
               <button
@@ -238,7 +238,7 @@ const Login: React.FC = () => {
                         collegePasskey: e.target.value,
                       })
                     }
-                    minLength={7}
+                    minLength={5}
                     maxLength={20}
                     required
                     className="h-10 sm:h-11 rounded-md border-gray-300 pr-12 sm:pr-14 text-sm sm:text-base"
@@ -277,7 +277,6 @@ const Login: React.FC = () => {
             className="h-full w-full object-contain object-right"
           />
         </div>
-
       </div>
     </div>
   );

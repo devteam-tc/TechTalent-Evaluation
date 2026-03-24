@@ -20,10 +20,20 @@ import Conditions from "./pages/Conditions";
 import ExamsTab from "./pages/ExamsTab";
 import MCQPaper from "./pages/MCQPaper";
 import Login from "./pages/Login";
-
-
-
-
+import ImpactSection from "./pages/ImpactSection";
+import StudentDashboard from "./pages/StudentDashboard";
+import Profile from "./pages/Profile";
+import Individual from "./pages/Individual";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import Success1 from "./pages/Success1";
+import Registration from "./pages/Registration";
+import Performance from "./pages/Performance";
+import Payments from "./pages/Payments";
+import Certificate from "./pages/Certificate";
+import IndividualOverview from "./pages/IndividualOverview";
+import IndividualTerms from "./pages/IndividualTerms";
+import UpgradePage from "./pages/UpgradePage";
 
 const queryClient = new QueryClient();
 
@@ -39,21 +49,31 @@ const App = () => (
           <Route path="/overview" element={<Overview />} />
           <Route path="/exam" element={<Exam />} />
           <Route path="/success" element={<Success />} />
-          <Route path="/dashboard" element={<Dashboard/>} />
-           <Route path="/dev" element={<DevTalentComponent/>} />
-           <Route path="/gallery" element={<FullPage />} />
-             <Route path="/coddingExam" element={<CoddingExam />} />
-             <Route path="/online-compiler" element={<OnlineCompiler />} />
-             <Route path="/privacy" element={<Privacy />} />
-             <Route path="/condition" element={<Conditions />} />
-             {/* <Route path="/mcq" element={<MCQQuestionPaperCard />} /> */}
-             <Route path="/examtab" element= {<ExamsTab />} />
-               <Route path="/mcqpaper/:attemptId" element={<MCQPaper />} />
-               <Route path="/login" element={<Login />} />
-            
- 
-
-
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dev" element={<DevTalentComponent />} />
+          <Route path="/gallery" element={<FullPage />} />
+          <Route path="/coddingExam" element={<CoddingExam />} />
+          <Route path="/online-compiler" element={<OnlineCompiler />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/condition" element={<Conditions />} />
+          {/* <Route path="/mcq" element={<MCQQuestionPaperCard />} /> */}
+          <Route path="/examtab" element={<ExamsTab />} />
+          <Route path="/mcqpaper/:attemptId" element={<MCQPaper />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/impactsection" element={<ImpactSection />} />
+          <Route path="/studentdashboard" element={<StudentDashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/individual" element={<Individual />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgotpassword" element={<ForgotPassword />} />
+          <Route path="/success1" element={<Success1 />} />
+          <Route path="/registration" element={<Registration />} />
+          <Route path="/performance" element={<Performance />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/certificate" element={<Certificate />} />
+          <Route path="/individualoverview" element={<IndividualOverview />} />
+          <Route path="/individualterms" element={<IndividualTerms />} />
+          <Route path="/upgrade" element={<UpgradePage />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

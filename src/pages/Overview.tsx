@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar } from "lucide-react";
+import { Clock, Calendar, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 // import MCQQuestionPaperCard from "@/components/MCQQuestionPaperCard";
 import ExamList from "@/components/ExamList";
@@ -23,7 +22,10 @@ interface Exam {
 export default function Overview() {
   const navigate = useNavigate();
   const [exams, setExams] = useState<Exam[]>([]);
-  const [submittedExamIds, setSubmittedExamIds] = useState<Set<number>>(new Set());
+  const [submittedExamIds, setSubmittedExamIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [recentExam, setRecentExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("userToken");
   const collageName = localStorage.getItem("userCollege");
@@ -41,6 +43,7 @@ export default function Overview() {
   const fetchExams = async () => {
     try {
       const url = `https://api.devtalent.securxperts.com:8000/exam/get?collage=${encodeURIComponent(collageName || "")}`;
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -93,11 +96,17 @@ export default function Overview() {
   //   }
   // };
 
-
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }) +
-      ", " + date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    return (
+      date.toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }) +
+      ", " +
+      date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const handleStartExam = async (examId: number) => {
@@ -118,26 +127,64 @@ export default function Overview() {
   }
 
   return (
-    <div className="min-h-screen bg-white py-12 px-6">
+    <div className="min-h-screen bg-white py-12 px-6 relative">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/terms")}
+        className="absolute top-6 left-4 z-10 transition-all duration-0 hover:opacity-80"
+        style={{
+          width: "174.625px",
+          height: "36px",
+          // background: "linear-gradient(0deg, #6E25B3 0%, #6D28D9 100%)",
+          borderRadius: "10px",
+          color: "black",
+          fontWeight: "medium",
+          fontSize: "14px",
+          animationDuration: "0ms",
+        }}
+      >
+        ← Back
+      </button>
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold mb-2" style={{ color: "#33329C" }}>
+          <h1 className="text-5xl font-bold mb-2" style={{ color: "#6F24A6" }}>
             Welcome to Exam Portal
           </h1>
-          <p className="text-lg" style={{ color: "#33329C" }}>
+          <p className="text-lg" style={{ color: "#6B7280" }}>
             College: {collageName || "IMT college, Hyderabad"}
           </p>
         </div>
 
-        <div className="text-center mb-12" >
+        {/* Recent Exam Alert */}
+        {recentExam && (
+          <div className="mx-6 mb-8 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-green-800 mb-1">
+                  🎉 New Exam Added Successfully!
+                </h3>
+                <p className="text-green-700">
+                  <strong>{recentExam.title}</strong> has been created and is
+                  now available.
+                </p>
+              </div>
+              <button
+                onClick={() => setRecentExam(null)}
+                className="text-green-600 hover:text-green-800 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+        <div className="text-start mb-12">
+          <h1 className="text-3xl md:text-3xl font-bold text-gray-800 mb-4">
             Coding Questions
           </h1>
         </div>
-
-
 
         {/* Top Row - Two Special Cards */}
         <div className="grid md:grid-cols-2 gap-10 mb-16 max-w-5xl mx-auto">
@@ -161,7 +208,6 @@ export default function Overview() {
           </div> */}
 
           {/* Non-Technical Round */}
-
         </div>
 
         {/* Bottom Row - Regular Exam Cards */}
@@ -180,49 +226,87 @@ export default function Overview() {
               const isSubmitted = submittedExamIds.has(exam.id);
 
               return (
-
-
                 <div
                   key={exam.id}
-                  className="bg-white rounded-2xl shadow-lg border-t-8"
-                  style={{ borderTopColor: "#33329C" }}
+                  className="bg-white rounded-2xl shadow-xl border-t-4"
+                  style={{ borderTopColor: "#dbdbdcff" }}
                 >
-
-
                   <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-xl font-semibold text-gray-800">{exam.title}</h4>
-                      <Badge className="rounded-full px-4 py-1 text-sm" style={{ backgroundColor: "#33329C", color: "white" }}>
+                    <div className="flex flex-col gap-2 mb-6">
+                      <h4 className="text-xl font-bold text-gray-900">
+                        {exam.title}
+                      </h4>
+                      <Badge
+                        className="rounded-full px-3 py-1 text-sm font-medium w-fit"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, #6E25B3 0%, #6D28D9 100%)",
+                          color: "white",
+                        }}
+                      >
                         {exam.duration} Mins
                       </Badge>
+                      {/* <span className="text-sm text-gray-600">Duration {exam.duration} mins</span> */}
                     </div>
 
-                    <div className="space-y-3 text-gray-700 text-sm mb-6">
-                      <p className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5" style={{ color: "#33329C" }} />
-                        Start: {formatDateTime(exam.window_start)}
-                      </p>
-                      <p className="flex items-start gap-2">
-                        <Clock className="w-5 h-5 mt-0.5" style={{ color: "#33329C" }} />
+                    <div className="space-y-3 text-gray-700 text-sm mb-8">
+                      <div className="flex items-center gap-3">
+                        <Calendar
+                          className="w-4 h-4 flex-shrink-0"
+                          color="#7C3AED"
+                        />
+                        <span>Start: {formatDateTime(exam.window_start)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Clock
+                          className="w-4 h-4 flex-shrink-0"
+                          color="#7C3AED"
+                        />
+                        <span>Duration: {exam.duration} mins</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <BookOpen
+                          className="w-4 h-4 flex-shrink-0"
+                          color="#7C3AED"
+                        />
                         <span>
-                          Duration {exam.duration} mins<br />
-                          1 Question. 10 marks
+                          {Object.keys(exam.questions || {}).length} Questions:{" "}
+                          {exam.questions &&
+                          Object.keys(exam.questions).length > 0
+                            ? Object.values(exam.questions).reduce(
+                                (total: number, q: any) =>
+                                  total + (q.score || 0),
+                                0,
+                              )
+                            : Object.keys(exam.questions || {}).length *
+                              10}{" "}
+                          marks
                         </span>
-                      </p>
+                      </div>
                     </div>
 
                     <Button
                       onClick={() => handleStartExam(exam.id)}
                       disabled={!isStarted || isEnded || isSubmitted}
-                      className="w-full text-lg py-6 font-semibold text-white rounded-lg"
+                      className="w-full text-base font-semibold text-white rounded-lg py-3"
                       style={{
-                        background: (isSubmitted || !isStarted || isEnded)
-                          ? "#cccccc"
-                          : "linear-gradient(to right, #29287D, #3D0B46)",
-                        cursor: (!isStarted || isEnded || isSubmitted) ? "not-allowed" : "pointer",
+                        background:
+                          isSubmitted || !isStarted || isEnded
+                            ? "#9CA3AF"
+                            : "linear-gradient(180deg, #6E24A5 0%, #6D28D9 100%)",
+                        cursor:
+                          !isStarted || isEnded || isSubmitted
+                            ? "not-allowed"
+                            : "pointer",
                       }}
                     >
-                      {isSubmitted ? "Exam Completed" : (!isStarted ? "Not Started Yet" : isEnded ? "Exam Ended" : "Start Exam Now")}
+                      {isSubmitted
+                        ? "Exam Completed"
+                        : !isStarted
+                          ? "Not Started Yet"
+                          : isEnded
+                            ? "Exam Ended"
+                            : "Start Exam Now"}
                     </Button>
                   </div>
                 </div>
@@ -234,6 +318,5 @@ export default function Overview() {
       {/* <MCQQuestionPaperCard /> */}
       <ExamList />
     </div>
-
   );
 }

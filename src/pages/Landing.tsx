@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,9 @@ import about from "../assests/About Us.png";
 import techlogo from "../assests/techlogo.png";
 import icon from "../assests/icon.png";
 import Devlogo from "../assests/Devlogo.png";
+import ContactUsSection from "./ContactUsSection";
+import Footer from "../components/Footer";
+import Vision from "./Vision";
 import {
   Select,
   SelectContent,
@@ -30,15 +33,18 @@ import HeroSection from "./HeroSection";
 import AboutSection from "./AboutSection";
 import VisionSection from "./VisionSection";
 import CommonPainPointsSection from "./CommonPainPointsSection";
-import OurSolutionsSection from "./OurSolutionsSection";
+import SolutionsSection from "./SolutionsSection";
 import GallerySection from "./GallerySection";
 import DemoSection from "./DemoSection";
+import { ChevronDown } from "lucide-react";
+import ImpactSection from "./ImpactSection";
 
 const Landing = () => {
   const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loginData, setLoginData] = useState({
     email: "",
@@ -59,6 +65,10 @@ const Landing = () => {
 
   const [contactErrors, setContactErrors] = useState({});
 
+  const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const fetchColleges = async () => {
       try {
@@ -74,6 +84,23 @@ const Landing = () => {
       }
     };
     fetchColleges();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsLoginDropdownOpen(false);
+        setIsRegisterOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -341,33 +368,40 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-purple-50 overflow-x-hidden">
       {/* NAVBAR - Reduced extra spacing */}
-      <header className="sticky top-0 z-50 bg-purple-100 border-b border-purple-200 w-full">
+      <header className="sticky top-0 z-50 bg-white  w-full">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 max-w-full">
           <div className="flex items-center justify-between">
             <img
               src={Devlogo}
               alt="DevTalent Logo"
-              className="h-10 sm:h-12 lg:h-14 object-contain cursor-pointer"
+              className="h-20 sm:h-12 lg:h-20 object-contain cursor-pointer"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             />
 
             <nav className="hidden lg:flex items-center space-x-4 sm:space-x-6 lg:space-x-8 flex-1 justify-center">
               {[
                 "Home",
-                "About",
+                "About Us",
                 "Vision",
-                "Pain points",
                 "Solution",
-                "Gallery",
                 "Demo",
+                "Contact Us",
               ].map((item) => (
                 <button
                   key={item}
-                  onClick={() =>
-                    document
-                      .querySelector(`#${item.toLowerCase().replace(" ", "-")}`)
-                      ?.scrollIntoView({ behavior: "smooth" })
-                  }
+                  onClick={() => {
+                    if (item === "Home") {
+                      window.location.reload();
+                    } else if (item === "Contact Us") {
+                      setIsContactOpen(true); // 👉 open modal
+                    } else {
+                      document
+                        .querySelector(
+                          `#${item.toLowerCase().replace(" ", "-")}`,
+                        )
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
                   className="text-gray-800 font-medium text-sm sm:text-base hover:text-[#961BAC] transition-colors duration-200 relative group"
                 >
                   {item}
@@ -377,29 +411,118 @@ const Landing = () => {
             </nav>
 
             <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
-              <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
-                <Button
-                  onClick={() => navigate("/login")}
-                  className="bg-white text-[#33329C] border border-purple-300 rounded-full px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 text-sm sm:text-base font-medium hover:bg-purple-50 transition"
-                >
-                  Login
-                </Button>
+              <div
+                ref={dropdownRef}
+                className="hidden md:flex items-center space-x-2 sm:space-x-3"
+              >
+                {" "}
+                <div className="relative">
+                  <Button
+                    onClick={() => {
+                      setIsLoginDropdownOpen(!isLoginDropdownOpen);
+                      setIsRegisterOpen(false);
+                    }}
+                    className="bg-gradient-to-r from-[#8A1EAB] to-[#39319D] text-white 
+    h-[39px] px-6 py-[10px] rounded-md text-sm font-medium 
+    hover:opacity-90 transition flex items-center gap-2"
+                  >
+                    Login As
+                    {/* Arrow */}
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        isLoginDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
 
-                <Button
+                  {isLoginDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-full bg-white rounded-md shadow-lg border z-50">
+                      <button
+                        onClick={() => {
+                          navigate("/login");
+                          setIsLoginDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        College Student
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/individual");
+                          setIsLoginDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        Individual Student
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* REGISTER DROPDOWN */}
+                <div className="relative">
+                  <Button
+                    onClick={() => {
+                      setIsRegisterOpen(!isRegisterOpen);
+                      setIsLoginDropdownOpen(false); // close other dropdown
+                    }}
+                    className="bg-gradient-to-r from-[#8A1EAB] to-[#39319D] text-white
+      h-[39px] px-6 py-[10px] rounded-md text-sm font-medium
+      hover:opacity-90 transition flex items-center gap-2"
+                  >
+                    Register As
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        isRegisterOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+
+                  {isRegisterOpen && (
+                    <div className="absolute right-0 mt-2 w-full bg-white rounded-md shadow-lg border z-50">
+                      <button
+                        onClick={() => {
+                          navigate("/registration");
+                          setIsRegisterOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        College Student
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/register");
+                          setIsRegisterOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        Individual Student
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* <Button
                   onClick={() => setIsContactOpen(true)}
                   className="bg-white text-[#33329C] border border-purple-300 rounded-full px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 text-sm sm:text-base font-medium hover:bg-purple-50 transition"
                 >
                   Contact us
-                </Button>
+                </Button> */}
                 <Button
-                  onClick={() => setIsAdminLoginOpen(true)}
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #961BAC 0%, #B14BDB 100%)",
+                  onClick={() => {
+                    setIsAdminLoginOpen(true);
+                    setIsLoginDropdownOpen(false);
+                    setIsRegisterOpen(false);
                   }}
-                  className="text-white rounded-full px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  className="h-[39px] w-[150px] px-6 py-[10px] rounded-md text-[16px] font-bold 
+             bg-white text-[#3E319E] 
+             border border-transparent
+             [background:linear-gradient(white,white)_padding-box,linear-gradient(90deg,#8020A9,#3E319E)_border-box]
+             hover:shadow-md transition-all"
                 >
-                  Admin login
+                  Admin Login
                 </Button>
               </div>
               <button
@@ -421,22 +544,28 @@ const Landing = () => {
               <nav className="flex flex-col space-y-3 sm:space-y-4 mb-3 sm:mb-4 w-full">
                 {[
                   "Home",
-                  "About",
+                  "About Us",
                   "Vision",
-                  "Pain points",
                   "Solution",
-                  "Gallery",
                   "Demo",
+                  "Contact Us",
                 ].map((item) => (
                   <button
                     key={item}
                     onClick={() => {
-                      document
-                        .querySelector(
-                          `#${item.toLowerCase().replace(" ", "-")}`,
-                        )
-                        ?.scrollIntoView({ behavior: "smooth" });
-                      setIsMobileMenuOpen(false);
+                      if (item === "Home") {
+                        window.location.reload();
+                      } else if (item === "Contact Us") {
+                        setIsContactOpen(true); // ✅ open modal
+                      } else {
+                        document
+                          .querySelector(
+                            `#${item.toLowerCase().replace(" ", "-")}`,
+                          )
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }
+
+                      setIsMobileMenuOpen(false); // ✅ close mobile menu
                     }}
                     className="text-gray-800 font-medium text-left text-base sm:text-lg hover:text-[#961BAC] transition px-2 py-1"
                   >
@@ -444,17 +573,97 @@ const Landing = () => {
                   </button>
                 ))}
               </nav>
+
               <div className="flex flex-col space-y-2 sm:space-y-3 px-2">
-                <Button
-                  onClick={() => {
-                    navigate("/login");
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="bg-white text-[#33329C] border border-purple-300 rounded-full px-4 py-2 text-sm sm:text-base font-medium hover:bg-purple-50 transition w-full"
-                >
-                  Login
-                </Button>
-                <Button
+                <div className="relative w-full">
+                  <Button
+                    onClick={() => setIsLoginDropdownOpen(!isLoginDropdownOpen)}
+                    className="bg-gradient-to-r from-[#8A1EAB] to-[#39319D] text-white 
+  px-4 py-2 text-sm font-medium w-full flex items-center justify-center gap-2"
+                  >
+                    Login As
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        isLoginDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+
+                  {isLoginDropdownOpen && (
+                    <div className="mt-2 w-full bg-white rounded-md shadow-lg border">
+                      <button
+                        onClick={() => {
+                          navigate("/login");
+                          setIsLoginDropdownOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        College Student
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/studentdashboard");
+                          setIsLoginDropdownOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        Individual Student
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* REGISTER DROPDOWN */}
+                <div className="relative w-full">
+                  <Button
+                    onClick={() => {
+                      setIsRegisterOpen(!isRegisterOpen);
+                      setIsLoginDropdownOpen(false); // close other dropdown
+                    }}
+                    className="bg-gradient-to-r from-[#8A1EAB] to-[#39319D] text-white 
+  px-4 py-2 text-sm font-medium w-full flex items-center justify-center gap-2"
+                  >
+                    Register As
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        isRegisterOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+
+                  {isRegisterOpen && (
+                    <div className="mt-2 w-full bg-white rounded-md shadow-lg border">
+                      <button
+                        onClick={() => {
+                          navigate("/register-individual");
+                          setIsRegisterOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        Individual
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/register-student");
+                          setIsRegisterOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        College Student
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* <Button
                   onClick={() => {
                     setIsContactOpen(true);
                     setIsMobileMenuOpen(false);
@@ -462,19 +671,19 @@ const Landing = () => {
                   className="w-full bg-white text-[#33329C] border border-purple-300 rounded-full py-5 font-medium text-lg hover:bg-purple-50"
                 >
                   Contact us
-                </Button>
+                </Button> */}
                 <Button
                   onClick={() => {
                     setIsAdminLoginOpen(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #961BAC 0%, #B14BDB 100%)",
-                  }}
-                  className="w-full text-white rounded-full py-5 font-medium text-lg shadow-lg hover:shadow-xl"
+                  className="w-full h-[39px] px-6 py-[10px] rounded-md text-[16px] font-bold 
+             bg-white text-[#3E319E] 
+             border border-transparent
+             [background:linear-gradient(white,white)_padding-box,linear-gradient(90deg,#8020A9,#3E319E)_border-box]
+             transition-all hover:shadow-md"
                 >
-                  Admin login
+                  Admin Login
                 </Button>
               </div>
             </div>
@@ -483,28 +692,34 @@ const Landing = () => {
       </header>
 
       {/* HERO SECTION */}
-      <HeroSection />
+      <HeroSection onLoginClick={() => setIsLoginOpen(true)} />
 
       {/* ABOUT SECTION */}
       <AboutSection />
 
+      <Vision />
+
+      <ImpactSection />
+
       {/* VISION */}
-      <VisionSection />
+      {/* <VisionSection /> */}
 
       {/* COMMON PAIN POINTS */}
-      <CommonPainPointsSection />
+      {/* <CommonPainPointsSection /> */}
 
       {/* OUR SOLUTION */}
-      <OurSolutionsSection />
-
-      {/* GALLERY */}
-      <GallerySection />
+      <SolutionsSection />
 
       {/* DEMO */}
       <DemoSection />
 
+      <ContactUsSection />
+
+      {/* GALLERY */}
+      {/* <GallerySection /> */}
+
       {/* FOOTER */}
-      <footer
+      {/* <footer
         className="text-[#4A289D] pt-8 sm:pt-10 pb-8 sm:pb-10 w-full overflow-x-hidden"
         style={{
           background:
@@ -527,7 +742,7 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 lg:gap-32 lg:pr-0 lg:pr-32 w-full lg:w-auto">
-              {/* FOLLOW US */}
+              
               <div className="text-center sm:text-left">
                 <h3 className="font-semibold mb-4 sm:mb-6 lg:mb-8 text-sm">
                   Follow us
@@ -576,7 +791,7 @@ const Landing = () => {
                 </ul>
               </div>
 
-              {/* ADDRESS */}
+              
               <div className="text-center sm:text-left">
                 <h3 className="font-semibold mb-4 sm:mb-6 text-sm">Address</h3>
 
@@ -593,7 +808,7 @@ const Landing = () => {
                   </p>
                 </div>
 
-                {/* SUPPORT CONTACT */}
+                
                 <div className="mt-3 sm:mt-5 text-sm space-y-2">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <MdEmail className="text-[#4A289D]" size={16} />
@@ -634,7 +849,8 @@ const Landing = () => {
             </p>
           </div>
         </div>
-      </footer>
+      </footer> */}
+      <Footer />
 
       {/* ADMIN LOGIN */}
       <Dialog
@@ -736,9 +952,9 @@ const Landing = () => {
                 <SelectValue placeholder="Select User Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="college">College</SelectItem>
-                <SelectItem value="recruiter">Recruiter</SelectItem>
+                <SelectItem value="student">Individual Student</SelectItem>
+                <SelectItem value="college">College Student</SelectItem>
+                <SelectItem value="recruiter">Company Recruiter</SelectItem>
               </SelectContent>
             </Select>
 
