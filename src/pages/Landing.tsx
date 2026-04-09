@@ -510,20 +510,53 @@ const Landing = () => {
                 >
                   Contact us
                 </Button> */}
-                <Button
-                  onClick={() => {
-                    setIsAdminLoginOpen(true);
-                    setIsLoginDropdownOpen(false);
-                    setIsRegisterOpen(false);
-                  }}
-                  className="h-[39px] w-[150px] px-6 py-[10px] rounded-md text-[16px] font-bold 
-             bg-white text-[#3E319E] 
-             border border-transparent
-             [background:linear-gradient(white,white)_padding-box,linear-gradient(90deg,#8020A9,#3E319E)_border-box]
-             hover:shadow-md transition-all"
-                >
-                  Admin Login
-                </Button>
+             <div className="relative">
+                  <Button
+                    onClick={() => {
+                      setIsAdminDropdownOpen(!isAdminDropdownOpen);
+                      setIsLoginDropdownOpen(false);
+                      setIsRegisterOpen(false);
+                    }}
+                    className="h-[39px] w-full px-6 py-[10px] rounded-md text-[16px] font-bold 
+    bg-white text-[#3E319E] 
+    border border-transparent
+    [background:linear-gradient(white,white)_padding-box,linear-gradient(90deg,#8020A9,#3E319E)_border-box]
+    hover:shadow-md transition-all flex items-center justify-center gap-2"
+                  >
+                    Admin Login
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        isAdminDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+
+                  {/* DROPDOWN */}
+                  {isAdminDropdownOpen && (
+                    <div className="mt-2 w-full bg-white rounded-md shadow-lg border z-[99999]">
+                      <button
+                        onClick={() => {
+                          setIsAdminLoginOpen(true); // ✅ open popup
+                          setIsAdminDropdownOpen(false); // close dropdown
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-100 text-sm border-b border-gray-100"
+                      >
+                        College Student
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/adminlogin"); // change route if needed
+                          setIsAdminDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-100 text-sm"
+                      >
+                        Individual Student
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

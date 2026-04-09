@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, X, FileText, BookOpen } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CourseItem } from "../Exams/types";
+import { CourseItem } from "./types";
 
 const API_BASE_URL = 'http://192.168.0.154:9000';
 
