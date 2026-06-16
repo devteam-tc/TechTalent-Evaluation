@@ -3,13 +3,14 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Clock, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import Devlogo from "../assests/Devlogo.png";
- 
+import { API_BASE_URL } from "@/pages/Services/api/api";
+
 interface Option {
   id: number;
   text: string;
   image_url?: string;
 }
- 
+
 interface Question {
   id: number;
   question_id?: number;
@@ -17,16 +18,16 @@ interface Question {
   image_url?: string;
   options: Option[];
 }
- 
+
 const MCQPaper: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const token = localStorage.getItem("userToken");
- 
+  const token = localStorage.getItem("access_token") || localStorage.getItem("userToken");
+
   // Get exam data from navigation state
   const examDataFromState = location.state?.examData;
- 
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<
@@ -43,7 +44,7 @@ const MCQPaper: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
- 
+
   // Decode JWT to get user ID and college name
   useEffect(() => {
     if (!token) {
@@ -55,18 +56,18 @@ const MCQPaper: React.FC = () => {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const extractedUserId = String(
         payload.user_id ||
-          payload.id ||
-          payload.candidate_id ||
-          payload.sub ||
-          "",
+        payload.id ||
+        payload.candidate_id ||
+        payload.sub ||
+        "",
       );
       setUserId(extractedUserId);
-     
+
       // Get college name from token or localStorage
       const extractedCollegeName = payload.college_name ||
-                                payload.college ||
-                                localStorage.getItem("userCollege") ||
-                                "";
+        payload.college ||
+        localStorage.getItem("userCollege") ||
+        "";
       setCollegeName(extractedCollegeName);
     } catch (err) {
       console.error("Invalid token");
@@ -79,43 +80,68 @@ const MCQPaper: React.FC = () => {
   useEffect(() => {
     const fetchPaper = async () => {
       try {
-        // First fetch exam details to get title and duration
-        const examRes = await axios.get(
-          `https://api.devtalent.securxperts.com:8000/exam/exams`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-
-        console.log("Exams API Response:", examRes.data);
-        
-        // Find the exam that matches the current attempt (you may need to adjust this logic)
-        const currentExam = Array.isArray(examRes.data) ? examRes.data[0] : examRes.data;
-        
-        if (currentExam) {
-          const dynamicTitle = currentExam.title || "MCQ Exam";
-          console.log("Setting dynamic exam title from exams API:", dynamicTitle);
-          setExamTitle(dynamicTitle);
-
-          const durationMinutes = currentExam.duration_minutes || 10;
+        // Check if we have exam details from state
+        if (examDataFromState) {
+          setExamTitle(examDataFromState.title || "MCQ Exam");
+          const durationMinutes = examDataFromState.duration || 10;
           setDuration(durationMinutes);
           setTimeLeft(durationMinutes * 60);
           setHasStarted(true);
-          console.log("Setting duration from exams API:", durationMinutes, "minutes");
+        } else {
+          // Fallback to fetch exam details if state is missing
+          const examRes = await axios.get(
+            `${API_BASE_URL}/exam/exams`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+
+          console.log("Exams API Response:", examRes.data);
+
+          // Find the exam that matches the current attempt
+          const currentExam = Array.isArray(examRes.data) ? examRes.data[0] : examRes.data;
+
+          if (currentExam) {
+            const dynamicTitle = currentExam.title || "MCQ Exam";
+            setExamTitle(dynamicTitle);
+
+            const durationMinutes = currentExam.duration_minutes || 10;
+            setDuration(durationMinutes);
+            setTimeLeft(durationMinutes * 60);
+            setHasStarted(true);
+          }
         }
 
-        // Get the paper questions
-        const res = await axios.get(
-          `https://api.devtalent.securxperts.com:8000/exam/attempts/${attemptId}/paper`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-
-        console.log("MCQ Paper API Response:", res.data);
-
-        const paper: Question[] = Array.isArray(res.data)
-          ? res.data
-          : res.data.questions;
-        if (!paper || paper.length === 0) throw new Error("No questions found");
-
-        setQuestions(paper);
+        // Use questions from state
+        let paper: Question[] = [];
+        const hasQuestionsInState = examDataFromState && examDataFromState.questions && 
+          (Array.isArray(examDataFromState.questions) ? examDataFromState.questions.length > 0 : Object.keys(examDataFromState.questions).length > 0);
+          
+        if (hasQuestionsInState) {
+          paper = Array.isArray(examDataFromState.questions) 
+            ? examDataFromState.questions 
+            : Object.values(examDataFromState.questions);
+        } else if (examDataFromState && examDataFromState.examId) {
+          // Fallback to fetching questions directly using the examId
+          const qRes = await axios.get(
+            `${API_BASE_URL}/ind/mcq/student/exams/${examDataFromState.examId}/questions?limit=500`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          
+          if (Array.isArray(qRes.data)) {
+            paper = qRes.data;
+          } else if (qRes.data && Array.isArray(qRes.data.questions)) {
+            paper = qRes.data.questions;
+          } else if (qRes.data && typeof qRes.data === 'object') {
+            // It might be a Record object
+            paper = Object.values(qRes.data);
+          }
+        }
+        
+        if (!paper || paper.length === 0) {
+          console.error("Parsed paper is empty or invalid. examDataFromState:", examDataFromState);
+          throw new Error("No questions found in exam data.");
+        }
+        
+        setQuestions(Array.isArray(paper) ? paper.flat() : paper);
       } catch (err: any) {
         console.error("Paper fetch error:", err);
         console.error("Error response:", err.response?.data);
@@ -140,7 +166,7 @@ const MCQPaper: React.FC = () => {
       handleAutoSubmit();
     }
   }, [timeLeft, duration, questions.length, hasStarted]);
- 
+
   // Camera enforcement - start only after loading is complete
   useEffect(() => {
     if (!loading && questions.length > 0) {
@@ -151,7 +177,7 @@ const MCQPaper: React.FC = () => {
             video: true,
             audio: false, // Only request video to reduce permission issues
           });
- 
+
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
@@ -164,9 +190,9 @@ const MCQPaper: React.FC = () => {
           }, 1000);
         }
       };
- 
+
       startCamera();
- 
+
       return () => {
         if (videoRef.current?.srcObject) {
           (videoRef.current.srcObject as MediaStream)
@@ -176,7 +202,7 @@ const MCQPaper: React.FC = () => {
       };
     }
   }, [loading, questions.length]);
- 
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
       .toString()
@@ -184,55 +210,59 @@ const MCQPaper: React.FC = () => {
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
- 
+
   const selectOption = (questionIndex: number, optionId: number) => {
     setSelectedAnswers((prev) => ({ ...prev, [questionIndex]: optionId }));
   };
- 
+
   const handleSubmit = async () => {
-    if (!attemptId) return;
- 
-    const payload = Object.entries(selectedAnswers).map(
+    const examId = location.state?.examData?.examId || attemptId;
+    const courseId = location.state?.examData?.courseId || parseInt(localStorage.getItem("selectedCourseId") || "0") || 0;
+    if (!examId) return;
+
+    const submittedAnswers = Object.entries(selectedAnswers).map(
       ([qIdx, chosenOptionId]) => ({
         question_id:
           questions[Number(qIdx)].question_id || questions[Number(qIdx)].id,
-        chosen_option_id: chosenOptionId,
+        selected_option_id: chosenOptionId,
       }),
     );
- 
+
     try {
       await axios.post(
-        `https://api.devtalent.securxperts.com:8000/exam/attempts/${attemptId}/submit`,
-        { answers: payload },
+        `${API_BASE_URL}/ind/mcq/student/exams/${examId}/submit`,
+        { course_id: courseId, answers: submittedAnswers },
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setShowSuccessModal(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to submit exam");
+      alert(err.response?.data?.detail || "Failed to submit exam");
     }
   };
- 
+
   const handleAutoSubmit = async () => {
     setShowSuccessModal(true);
+    const examId = location.state?.examData?.examId || attemptId;
+    const courseId = location.state?.examData?.courseId || parseInt(localStorage.getItem("selectedCourseId") || "0") || 0;
     try {
       await axios.post(
-        `https://api.devtalent.securxperts.com:8000/exam/attempts/${attemptId}/submit`,
-        { answers: [] },
+        `${API_BASE_URL}/ind/mcq/student/exams/${examId}/submit`,
+        { course_id: courseId, answers: [] },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-    } catch {}
+    } catch { }
   };
- 
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading...
       </div>
     );
- 
+
   const q = questions[currentQuestionIndex];
- 
+
   return (
     <div className="min-h-screen bg-[#f6f5fb]">
       {/* HEADER */}
@@ -242,33 +272,33 @@ const MCQPaper: React.FC = () => {
           {/* <div className="w-8 h-8 bg-purple-700 rounded-full flex items-center justify-center text-white font-bold text-sm">
             TD
           </div> */}
- 
-           <img
+
+          <img
             src={Devlogo}
             alt="DevTalent Logo"
             className="h-16 w-16 object-contain"
           />
           <h1 className="text-sm font-semibold">Welcome To Exam Portal</h1>
         </div>
- 
+
         {/* Center */}
         <div className="text-center hidden lg:block">
           <p className="text-xs text-gray-400">College</p>
           <p className="text-sm font-semibold">{collegeName || "Loading..."}</p>
         </div>
- 
+
         {/* Right */}
         <div className="flex items-center gap-4">
           <div className="text-center">
             <p className="text-xs text-gray-400">TIME REMAINING</p>
             <p className="text-sm font-semibold">{formatTime(timeLeft)}</p>
           </div>
- 
+
           <div className="text-center">
             <p className="text-xs text-gray-400">CANDIDATE ID</p>
             <p className="text-sm font-semibold">{userId || "Loading..."}</p>
           </div>
- 
+
           <div className="relative pt-1">
             <div className="w-16 h-12 sm:w-20 sm:h-16 rounded-lg overflow-hidden bg-black">
               {cameraError ? (
@@ -296,7 +326,7 @@ const MCQPaper: React.FC = () => {
           </div>
         </div>
       </div>
- 
+
       {/* MAIN */}
       <div className="max-w-6xl mx-auto px-3 md:px-6 py-4 md:py-6">
         {/* EXAM TITLE */}
@@ -304,7 +334,7 @@ const MCQPaper: React.FC = () => {
           <h2 className="text-lg font-semibold">{examTitle}</h2>
           {/* <p className="text-gray-500 text-sm">Linux operating systems</p> */}
         </div>
- 
+
         {/* PROGRESS */}
         <div className="mb-6">
           <div className="flex justify-between text-sm text-gray-500 mb-2">
@@ -318,7 +348,7 @@ const MCQPaper: React.FC = () => {
               %
             </span>
           </div>
- 
+
           <div className="h-2 md:h-3 bg-gray-300 rounded-full overflow-hidden">
             <div
               className="h-full bg-indigo-600 transition-all"
@@ -328,21 +358,45 @@ const MCQPaper: React.FC = () => {
             />
           </div>
         </div>
- 
+
         {/* QUESTION CARD */}
         <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
           <p className="font-semibold mb-3">
             Question {currentQuestionIndex + 1}
           </p>
- 
+
           {/* <span className="inline-block bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full text-sm mb-4">
             Introduction to linux
           </span> */}
- 
+
           <h3 className="text-lg font-semibold mb-6">{q.text}</h3>
- 
+
           <div className="space-y-4">
-            {q.options.map((opt, idx) => {
+            {(() => {
+              let optionsToRender: any[] = [];
+              if (Array.isArray(q.options)) {
+                optionsToRender = q.options;
+              } else if (Array.isArray(q.choices)) {
+                optionsToRender = q.choices;
+              } else if (q.option_1 || q.option_a || q.option1) {
+                // Handle flat option structures
+                const flatOptions = [];
+                for (let i = 1; i <= 6; i++) {
+                  const letter = String.fromCharCode(96 + i); // a, b, c, d
+                  const text = q[`option_${i}`] || q[`option${i}`] || q[`option_${letter}`] || q[`option${letter}`];
+                  if (text) flatOptions.push({ id: i, text: text });
+                }
+                optionsToRender = flatOptions;
+              } else if (typeof q.options === 'object' && q.options !== null) {
+                // If options is a record object
+                optionsToRender = Object.entries(q.options).map(([k, v]: any) => ({ id: k, text: v.text || v }));
+              }
+              
+              if (optionsToRender.length === 0) {
+                 return <p className="text-red-500">No options available for this question. (Debug info: {JSON.stringify(q)})</p>;
+              }
+
+              return optionsToRender.map((opt, idx) => {
               const selected = selectedAnswers[currentQuestionIndex] === opt.id;
               return (
                 <button
@@ -359,9 +413,9 @@ const MCQPaper: React.FC = () => {
                   <span className="text-left">{opt.text}</span>
                 </button>
               );
-            })}
+            })})()}
           </div>
- 
+
           {/* NAVIGATION */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 md:mt-8">
             <button
@@ -373,7 +427,7 @@ const MCQPaper: React.FC = () => {
             >
               ‹ Previous
             </button>
- 
+
             {currentQuestionIndex < questions.length - 1 ? (
               <button
                 onClick={() =>
@@ -444,5 +498,5 @@ const MCQPaper: React.FC = () => {
     </div>
   );
 };
- 
+
 export default MCQPaper;

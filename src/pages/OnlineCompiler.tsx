@@ -16,7 +16,7 @@ import {
 import Devlogo from "../assests/Devlogo.png";
 
 axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem("userToken");
+  const token = localStorage.getItem("access_token") || localStorage.getItem("userToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -27,12 +27,13 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/mode-java";
 import "ace-builds/src-noconflict/mode-php";
 import "ace-builds/src-noconflict/theme-textmate"; // Light theme
+import { API_BASE_URL } from "@/pages/Services/api/api";
 
 export default function OnlineCompiler() {
   const location = useLocation();
   const navigate = useNavigate();
   const { examId } = location.state || {};
-  const token = localStorage.getItem("userToken");
+  const token = localStorage.getItem("access_token") || localStorage.getItem("userToken");
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -367,10 +368,10 @@ export default function OnlineCompiler() {
       setUserId(
         String(
           payload.user_id ||
-            payload.id ||
-            payload.candidate_id ||
-            payload.sub ||
-            "",
+          payload.id ||
+          payload.candidate_id ||
+          payload.sub ||
+          "",
         ),
       );
     } catch (err) {
@@ -390,40 +391,50 @@ export default function OnlineCompiler() {
 
   const fetchExamDetails = async () => {
     try {
-      const res = await axios.get(
-        "https://api.devtalent.securxperts.com:8000/exam/get/details",
-        {
-          params: { exam_id: examId },
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const examDataFromState = location.state?.examData;
+      let data: any = null;
 
-      const data = res.data;
+      if (examDataFromState && examDataFromState.questions && 
+         (Array.isArray(examDataFromState.questions) ? examDataFromState.questions.length > 0 : Object.keys(examDataFromState.questions).length > 0)) {
+         data = examDataFromState;
+      } else {
+        throw new Error("No questions found in exam data. Please restart the exam.");
+      }
+
       setExamTitle(data.title || "Coding Challenge");
 
       // Extract duration from exam details
       setDuration(data.duration || 60); // fallback to 60 mins if not present
 
       const rawQuestions = data.questions || {};
-      const formatted = Object.keys(rawQuestions).map((indexKey) => {
-        const q = rawQuestions[indexKey];
-        const details = q.details || {};
+      let questionsArray = [];
+      if (Array.isArray(rawQuestions)) {
+        questionsArray = rawQuestions;
+      } else if (rawQuestions.questions && Array.isArray(rawQuestions.questions)) {
+        questionsArray = rawQuestions.questions;
+      } else if (typeof rawQuestions === 'object') {
+        questionsArray = Object.values(rawQuestions);
+      }
+      
+      const formatted = questionsArray.map((q: any, index: number) => {
+        const details = q.details || q;
         return {
-          exam_question_index: indexKey,
-          question_bank_id: q.question_bank_id,
-          score: q.score || 10,
-          title: details.title || "Untitled",
-          question: details.question || "No statement",
-          description: details.description || "",
-          sample_inputs: details.sample_inputs || "",
-          sample_outputs: details.sample_outputs || "",
-          test_cases: details.test_cases || [],
+          exam_question_index: String(index),
+          question_bank_id: q.question_bank_id || q.question_id || q.id,
+          score: q.score || q.marks || 10,
+          title: details.title || q.title || "Untitled",
+          question: details.question || q.problem_description || q.text || q.question || "No statement",
+          description: details.description || q.description || "",
+          sample_inputs: details.sample_inputs || q.input_format || q.sample_inputs || "",
+          sample_outputs: details.sample_outputs || q.output_format || q.sample_outputs || "",
+          test_cases: details.test_cases || q.sample_testcases || q.test_cases || [],
         };
       });
 
       setQuestions(formatted);
       toast.success(`Loaded ${formatted.length} question(s)`);
     } catch (err: any) {
+      console.error("Failed to load coding exam", err);
       toast.error("Failed to load exam");
       navigate("/overview");
     } finally {
@@ -847,11 +858,10 @@ export default function OnlineCompiler() {
             <button
               key={i}
               onClick={() => setActiveIdx(i)}
-              className={`min-w-[36px] h-9 md:w-10 md:h-10 rounded-xl font-bold text-sm ${
-                i === activeIdx
+              className={`min-w-[36px] h-9 md:w-10 md:h-10 rounded-xl font-bold text-sm ${i === activeIdx
                   ? "bg-purple-600 text-white"
                   : "bg-white border text-gray-600"
-              }`}
+                }`}
             >
               {i + 1}
             </button>
@@ -961,11 +971,10 @@ export default function OnlineCompiler() {
                         Test Case {index + 1}
                       </p>
                       <span
-                        className={`px-2 py-1 rounded text-[10px] font-bold ${
-                          test.result?.every((r: any) => r.success)
+                        className={`px-2 py-1 rounded text-[10px] font-bold ${test.result?.every((r: any) => r.success)
                             ? "bg-green-600 text-white"
                             : "bg-red-600 text-white"
-                        }`}
+                          }`}
                       >
                         {test.result?.every((r: any) => r.success)
                           ? "PASSED"
@@ -1003,7 +1012,7 @@ export default function OnlineCompiler() {
                             <pre className="whitespace-pre-wrap break-words">
                               {JSON.stringify(
                                 result.expected_outputs ||
-                                  test.expected_outputs,
+                                test.expected_outputs,
                                 null,
                                 2,
                               )}

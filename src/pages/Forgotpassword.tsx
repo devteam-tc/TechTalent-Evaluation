@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import logo from "../assests/logo.png";
+import { API_BASE_URL } from "@/pages/Services/api/api";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function ForgotPassword() {
 
       try {
         const response = await axios.post(
-          "http://192.168.0.131:9000/student/forgot-password",
+          `${API_BASE_URL}/student/forgot-password`,
           {
             email: email,
           },
@@ -72,7 +73,7 @@ export default function ForgotPassword() {
 
       try {
         const response = await axios.post(
-          "http://192.168.0.131:9000/student/reset-password",
+          `${API_BASE_URL}/student/reset-password`,
           {
             email: email,
             otp: otp,
@@ -87,7 +88,7 @@ export default function ForgotPassword() {
 
         console.log("Reset Password Response:", response.data);
         setMessage("Password has been reset successfully.");
-        
+
         setTimeout(() => {
           navigate("/individual");
         }, 2000);
@@ -120,8 +121,8 @@ export default function ForgotPassword() {
               {step === 1 ? "Reset Password" : "Enter OTP & New Password"}
             </h2>
             <p className="text-xs sm:text-sm md:text-base opacity-90 mt-1">
-              {step === 1 
-                ? "Enter your email to receive reset instructions" 
+              {step === 1
+                ? "Enter your email to receive reset instructions"
                 : "Enter the OTP sent to your email and set new password"
               }
             </p>
@@ -166,9 +167,8 @@ export default function ForgotPassword() {
                   }}
                   placeholder="your.email@example.com"
                   disabled={step === 2}
-                  className={`w-full mt-2 px-4 py-2.5 sm:py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm sm:text-base ${
-                    emailError ? "border-red-500" : "border-gray-300"
-                  } ${step === 2 ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                  className={`w-full mt-2 px-4 py-2.5 sm:py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm sm:text-base ${emailError ? "border-red-500" : "border-gray-300"
+                    } ${step === 2 ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 />
 
                 {emailError && (
@@ -235,8 +235,8 @@ export default function ForgotPassword() {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-[#7B2CBF] to-[#3C096C] text-white py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium hover:opacity-90 transition disabled:opacity-50"
               >
-                {loading 
-                  ? "Processing..." 
+                {loading
+                  ? "Processing..."
                   : (step === 1 ? "Send OTP" : "Reset Password")
                 }
               </button>

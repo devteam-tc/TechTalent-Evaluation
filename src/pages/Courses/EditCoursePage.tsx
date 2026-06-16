@@ -1,292 +1,251 @@
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, X, FileText, BookOpen } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
-import { CourseItem } from "./types";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FiArrowLeft, FiX, FiBookOpen } from 'react-icons/fi';
+import { API_BASE_URL } from '@/pages/Services/api/api';
 
-const API_BASE_URL = 'http://192.168.0.154:9000';
-
-const EditCoursePage: React.FC = () => {
+const EditCourse = () => {
   const navigate = useNavigate();
-  const { courseId } = useParams<{ courseId: string }>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-  const [form, setForm] = useState({
-    courseName: "",
-    courseType: "Technical",
-    description: "",
-    status: "Active"
-  });
+  const [courseId, setCourseId] = useState('');
+  const [courseName, setCourseName] = useState('Computer Science');
+  const [courseType, setCourseType] = useState('Technical');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState('Active');
+  const [loading, setLoading] = useState(false);
 
-  const courseTypes = [
-    "Technical",
-    "Business",
-    "Creative",
-    "Language",
-    "Science",
-    "Mathematics",
-    "Other"
-  ];
-
-  const statusOptions = [
-    { value: "Active", label: "Active", description: "Course is available for enrollment" },
-    { value: "Draft", label: "Draft", description: "Course is not yet published" },
-    { value: "Inactive", label: "Inactive", description: "Course is temporarily unavailable" }
-  ];
-
-  // Fetch course data on component mount
+  // Load course ID from localStorage on mount
   useEffect(() => {
-    const fetchCourseData = async () => {
-      if (!courseId) return;
-      
-      try {
-        // For now, using mock data - replace with actual API call
-        // const response = await fetch(`${API_BASE_URL}/courses/${courseId}`);
-        // const courseData = await response.json();
-        
-        // Mock data - replace with actual API response
-        const mockCourseData: CourseItem = {
-          id: parseInt(courseId),
-          name: "Computer Science",
-          type: "Technical",
-          availableExams: 3,
-          totalExams: 3,
-          activeExams: 1,
-          totalStudents: 145,
-          exams: []
-        };
-        
-        setForm({
-          courseName: mockCourseData.name,
-          courseType: mockCourseData.type,
-          description: "", // This would come from API
-          status: "Active" // This would come from API
-        });
-      } catch (error) {
-        console.error('Error fetching course data:', error);
-        alert('Failed to load course data');
-        navigate('/courses');
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchCourseData();
-  }, [courseId, navigate]);
-
-  const handleInputChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!form.courseName.trim()) {
-      alert('Please enter a course name');
-      return;
+    const storedId = localStorage.getItem('editingCourseId');
+    if (storedId) {
+      setCourseId(storedId);
     }
-
-    setIsLoading(true);
-    
-    try {
-      // API call to update course
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth headers if needed
-        },
-        body: JSON.stringify({
-          name: form.courseName.trim(),
-          type: form.courseType,
-          description: form.description.trim(),
-          status: form.status,
-          // Add other required fields
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Course updated successfully:', result);
-        
-        // Navigate back to courses page
-        navigate('/courses');
-        
-        // Show success message (you could use a toast notification here)
-        alert('Course updated successfully!');
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update course');
-      }
-    } catch (error) {
-      console.error('Error updating course:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to update course'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, []);
 
   const handleCancel = () => {
     navigate('/courses');
   };
 
-  const descriptionLength = form.description.length;
-  const maxDescriptionLength = 500;
+  const handleUpdate = async () => {
+    if (!courseName.trim()) {
+      alert('Course name is required');
+      return;
+    }
 
-  if (isFetching) {
-    return (
-      <div className="min-h-screen bg-[#f3f2fb] flex items-center justify-center">
-        <div className="text-[#6b7280]">Loading course data...</div>
-      </div>
-    );
-  }
+    // Use the courseId from state (either from localStorage or manual input)
+    const courseIdToUse = courseId.trim();
+    if (!courseIdToUse) {
+      alert('Course ID is missing. Please enter a course ID.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      console.log('Admin token:', adminToken ? 'Found' : 'Not found');
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+      }
+
+      console.log('Request headers:', headers);
+      console.log('Updating course:', { courseId: courseIdToUse, type_id: 1, name: courseName.trim() });
+
+      // Directly update the course using PUT API
+      const updateResponse = await fetch(`${API_BASE_URL}/admin/catalog/courses/${courseIdToUse}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          type_id: 1,
+          name: courseName.trim()
+        })
+      });
+
+      if (updateResponse.ok) {
+        alert('Course updated successfully');
+        navigate('/courses');
+      } else {
+        const errorText = await updateResponse.text();
+        throw new Error(`Failed to update course: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error updating course:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to update course'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#f3f2fb] px-2 py-3 sm:px-4 md:px-6 lg:px-8">
-      <div className="mx-auto max-w-[800px]">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <button
-            onClick={handleCancel}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e1e3ea] bg-white text-[#6b7280] transition-colors hover:bg-[#f8f9fc] hover:text-[#5865f2]"
+    <div className="min-h-screen bg-[#F5F3FF] px-6 py-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={handleCancel}
+          className="p-2 rounded-lg hover:bg-white transition"
+        >
+          <FiArrowLeft size={22} className="text-gray-600" />
+        </button>
+
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Edit Course
+          </h1>
+          <p className="text-sm text-gray-500">
+            Update course details on your platform
+          </p>
+        </div>
+      </div>
+
+      {/* Card */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-sm">
+
+        {/* Top Section */}
+        <div className="flex items-start gap-4 p-6 border-b border-gray-200">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm transform -translate-y-[-6px] translate-x-[1px]"
+            style={{
+              background: 'linear-gradient(135deg, #6366F1, #9333EA)'
+            }}
           >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-[28px] font-bold text-[#1f2937]">
-              Edit Course
-            </h1>
-            <p className="text-[14px] text-[#6b7280]">
-              Update course information
+            <FiBookOpen className="text-white" size={20} />
+          </div>
+
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Course Information
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Update the course details below
             </p>
           </div>
         </div>
 
-        {/* Main Form */}
-        <div className="rounded-[16px] border border-[#e1e3ea] bg-white p-6 sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Course Information Section */}
-            <div>
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eef0ff]">
-                  <BookOpen className="h-5 w-5 text-[#5865f2]" />
-                </div>
-                <h2 className="text-[20px] font-semibold text-[#1f2937]">
-                  Course Information
-                </h2>
-              </div>
+        {/* Form */}
+        <div className="p-6 space-y-5">
 
-              <div className="space-y-6">
-                {/* Course Name */}
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#1f2937]">
-                    Course Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.courseName}
-                    onChange={(e) => handleInputChange('courseName', e.target.value)}
-                    placeholder="e.g., Computer Science, Digital Marketing"
-                    className="w-full rounded-[8px] border border-[#e1e3ea] bg-white py-3 px-4 text-[14px] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2]"
-                    required
-                  />
-                </div>
+          {/* Course ID */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Course ID <span className="text-red-500">*</span>
+            </label>
 
-                {/* Course Type */}
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#1f2937]">
-                    Course Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={form.courseType}
-                    onChange={(e) => handleInputChange('courseType', e.target.value)}
-                    className="w-full rounded-[8px] border border-[#e1e3ea] bg-white py-3 px-4 text-[14px] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] appearance-none"
-                    required
-                  >
-                    {courseTypes.map(type => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[12px] text-[#6b7280]">
-                    Select the category that best describes this course
-                  </p>
-                </div>
+            <input
+              type="text"
+              placeholder="Enter course ID"
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The ID of the course you want to edit
+            </p>
+          </div>
 
-                {/* Description */}
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#1f2937]">
-                    Description (Optional)
-                  </label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Provide a brief description of the course content and objectives..."
-                    rows={4}
-                    maxLength={maxDescriptionLength}
-                    className="w-full rounded-[8px] border border-[#e1e3ea] bg-white py-3 px-4 text-[14px] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] resize-none"
-                  />
-                  <div className="mt-1 flex justify-between">
-                    <p className="text-[12px] text-[#6b7280]">
-                      Brief overview of what students will learn
-                    </p>
-                    <p className="text-[12px] text-[#6b7280]">
-                      {descriptionLength}/{maxDescriptionLength} characters
-                    </p>
-                  </div>
-                </div>
+          {/* Course Name */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Course Name <span className="text-red-500">*</span>
+            </label>
 
-                {/* Status */}
-                <div>
-                  <label className="mb-2 block text-[14px] font-medium text-[#1f2937]">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full rounded-[8px] border border-[#e1e3ea] bg-white py-3 px-4 text-[14px] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] appearance-none"
-                  >
-                    {statusOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[12px] text-[#6b7280]">
-                    Set the course status. Only active courses are visible to students
-                  </p>
-                </div>
-              </div>
+            <input
+              type="text"
+              placeholder="e.g., Computer Science, Digital Marketing"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+            />
+          </div>
+
+          {/* Course Type */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Course Type <span className="text-red-500">*</span>
+            </label>
+
+            <select
+              value={courseType}
+              onChange={(e) => setCourseType(e.target.value)}
+              className="w-full h-11 px-4 border border-gray-300 rounded-lg font-normal text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none"
+            >
+              <option>Technical</option>
+              <option>Non-Technical</option>
+            </select>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Select the category that best describes this course
+            </p>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Description (Optional)
+            </label>
+
+            <textarea
+              rows={4}
+              maxLength={500}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide a brief description of the course content and objectives..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 outline-none"
+            />
+
+            <div className="text-right mt-1 text-xs text-gray-500">
+              {description.length}/500 characters
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="flex items-center justify-center gap-2 rounded-[8px] border border-[#e1e3ea] bg-white py-3 px-6 text-[14px] font-medium text-[#6b7280] transition-colors hover:bg-[#f8f9fc]"
-              >
-                <X size={16} />
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || !form.courseName.trim()}
-                className="flex items-center justify-center gap-2 rounded-[8px] py-3 px-6 text-[14px] font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: "linear-gradient(90deg, #4F39F6 0%, #9810FA 100%)",
-                  boxShadow: "0px 5.29px 7.94px -5.29px #0000001A, 0px 13.23px 19.85px -3.97px #0000001A",
-                }}
-              >
-                <FileText size={16} />
-                {isLoading ? 'Updating...' : 'Update Course'}
-              </button>
-            </div>
-          </form>
+          {/* Status */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Status
+            </label>
+
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full h-11 px-4 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-500 outline-none"
+            >
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Set the course status. Only active courses are visible to students.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer Buttons */}
+        <div className="flex justify-end gap-3 p-4 border-t border-gray-200 h-21 bg-[#F9FAFB]" >
+
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-2 px-5 h-10 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-[#F3F4F6] bg-white"
+          >
+            <FiX size={16} />
+            Cancel
+          </button>
+
+          <button
+            onClick={handleUpdate}
+            disabled={loading}
+            className="flex items-center gap-2 px-5 h-10 text-white rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #6366F1, #9333EA)'
+            }}
+          >
+            <FiBookOpen size={16} />
+            {loading ? 'Updating...' : 'Update Course'}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default EditCoursePage;
+export default EditCourse;

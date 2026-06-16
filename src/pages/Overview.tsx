@@ -272,14 +272,14 @@ export default function Overview() {
                         <span>
                           {Object.keys(exam.questions || {}).length} Questions:{" "}
                           {exam.questions &&
-                          Object.keys(exam.questions).length > 0
+                            Object.keys(exam.questions).length > 0
                             ? Object.values(exam.questions).reduce(
-                                (total: number, q: any) =>
-                                  total + (q.score || 0),
-                                0,
-                              )
+                              (total: number, q: any) =>
+                                total + (q.score || 0),
+                              0,
+                            )
                             : Object.keys(exam.questions || {}).length *
-                              10}{" "}
+                            10}{" "}
                           marks
                         </span>
                       </div>
