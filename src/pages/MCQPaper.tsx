@@ -24,6 +24,9 @@ const MCQPaper: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("access_token") || localStorage.getItem("userToken");
+  const getDashboardPath = () => {
+    return localStorage.getItem("access_token") ? "/individualoverview" : "/overview";
+  };
 
   // Get exam data from navigation state
   const examDataFromState = location.state?.examData;
@@ -486,7 +489,7 @@ const MCQPaper: React.FC = () => {
             <button
               onClick={() => {
                 setShowSuccessModal(false);
-                navigate("/overview");
+                navigate(getDashboardPath());
               }}
               className="w-full py-3 rounded-xl text-white font-semibold text-lg bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition"
             >

@@ -18,9 +18,167 @@ interface QuestionType {
 interface MCQQuestionsSectionProps {
   questions: QuestionType[];
   setQuestions: React.Dispatch<React.SetStateAction<QuestionType[]>>;
+  examId?: number | string;
 }
 
-const MCQQuestionsSection: React.FC<MCQQuestionsSectionProps> = ({ questions, setQuestions }) => {
+const MCQQuestionsSection: React.FC<MCQQuestionsSectionProps> = ({ questions, setQuestions, examId }) => {
+
+  const handleBulkUpload = () => {
+    if (!examId) {
+      alert("No exam ID found to upload questions.");
+      return;
+    }
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".csv,.xlsx,.json";
+    fileInput.multiple = false;
+
+    fileInput.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        console.log("Bulk upload file selected:", file.name);
+
+        const loadingToast = document.createElement('div');
+        loadingToast.style.cssText = `
+          position:fixed;top:20px;right:20px;background:#4F39F6;color:#fff;
+          padding:12px 20px;border-radius:8px;z-index:9999;
+          font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.15);
+        `;
+        loadingToast.textContent = 'Uploading questions...';
+        document.body.appendChild(loadingToast);
+
+        try {
+          const adminToken = localStorage.getItem('adminToken');
+          const headers: Record<string, string> = {
+            'accept': 'application/json'
+          };
+          if (adminToken) {
+            headers['Authorization'] = `Bearer ${adminToken}`;
+          }
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const response = await fetch(`${API_BASE_URL}/ind/mcq/admin/exams/${examId}/questions/bulk?skip_invalid=false`, {
+            method: 'POST',
+            headers,
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error response:', errorText);
+
+            let displayError = "";
+            try {
+              const errJson = JSON.parse(errorText);
+              const msg = errJson.message || errJson.detail?.message || errJson.error;
+              const subDetail = errJson.detail?.detail || errJson.detail || errJson.error_details;
+
+              if (msg && subDetail && typeof subDetail === 'object') {
+                displayError = `${msg}: Row ${subDetail.row || '?'} - ${subDetail.error || ''}`;
+              } else if (errJson.detail) {
+                if (typeof errJson.detail === 'string') {
+                  displayError = errJson.detail;
+                } else if (Array.isArray(errJson.detail)) {
+                  displayError = errJson.detail.map((d: any) => `${d.loc?.join('.') || 'Error'}: ${d.msg}`).join('\n');
+                } else {
+                  displayError = errJson.detail.message || JSON.stringify(errJson.detail);
+                }
+              } else if (errJson.message) {
+                displayError = errJson.message;
+              }
+            } catch (pErr) {
+              // ignore
+            }
+
+            throw new Error(displayError || `Failed to upload questions: Status ${response.status}`);
+          }
+
+          const result = await response.json();
+          console.log('Bulk upload success:', result);
+
+          loadingToast.textContent = 'Questions uploaded successfully!';
+          loadingToast.style.background = '#10b981';
+
+          const items = Array.isArray(result) 
+            ? result 
+            : (result?.items || result?.questions || result?.data || null);
+
+          if (Array.isArray(items) && items.length > 0) {
+            const newQuestions: QuestionType[] = items.map((q: any, index: number) => ({
+              id: q.id || (Date.now() + index),
+              backendId: q.id,
+              questionText: q.text || q.questionText || "",
+              options: q.options 
+                ? q.options.map((opt: any) => typeof opt === "string" ? opt : (opt.text || ""))
+                : ["", "", "", ""],
+              correctAnswer: q.correct_index !== undefined ? q.correct_index : (q.correctAnswer ?? null),
+              marks: q.marks || 1,
+            }));
+            
+            setQuestions((prev) => {
+              const filtered = prev.filter(q => q.questionText.trim() !== "" || q.options.some(o => o.trim() !== ""));
+              return [...filtered, ...newQuestions];
+            });
+          } else {
+            // Fallback: fetch questions from DB
+            try {
+              const fetchResponse = await fetch(`${API_BASE_URL}/ind/mcq/admin/exams/${examId}/questions?limit=500`, {
+                headers: {
+                  'Authorization': `Bearer ${adminToken}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              if (fetchResponse.ok) {
+                const fetchedData = await fetchResponse.json();
+                const fetchedItems = fetchedData.items || fetchedData;
+                if (Array.isArray(fetchedItems) && fetchedItems.length > 0) {
+                  const mappedQuestions: QuestionType[] = fetchedItems.map((q: any) => ({
+                    id: q.id,
+                    backendId: q.id,
+                    questionText: q.text || q.questionText || "",
+                    options: q.options ? q.options.map((opt: any) => typeof opt === "string" ? opt : (opt.text || "")) : ["", "", "", ""],
+                    correctAnswer: q.correct_index ?? null,
+                    marks: q.marks || 1
+                  }));
+                  setQuestions(mappedQuestions);
+                } else {
+                  alert('✅ Bulk questions uploaded successfully!');
+                }
+              } else {
+                alert('✅ Bulk questions uploaded successfully!');
+              }
+            } catch (fetchErr) {
+              console.error("Failed to fetch updated questions list:", fetchErr);
+              alert('✅ Bulk questions uploaded successfully!');
+            }
+          }
+
+          setTimeout(() => {
+            if (document.body.contains(loadingToast)) {
+              document.body.removeChild(loadingToast);
+            }
+          }, 1500);
+
+        } catch (error) {
+          console.error('Error during bulk upload:', error);
+          loadingToast.textContent = 'Error uploading questions';
+          loadingToast.style.background = '#ef4444';
+
+          setTimeout(() => {
+            alert(`❌ Error: ${error instanceof Error ? error.message : 'Failed to upload questions'}`);
+            if (document.body.contains(loadingToast)) {
+              document.body.removeChild(loadingToast);
+            }
+          }, 1500);
+        }
+      }
+    };
+
+    fileInput.click();
+  };
 
 
   const addQuestion = () => {
@@ -38,23 +196,23 @@ const MCQQuestionsSection: React.FC<MCQQuestionsSectionProps> = ({ questions, se
 
   const removeQuestion = async (id: number | string) => {
     const questionToRemove = questions.find(q => q.id === id);
-    
+
     // If it exists in backend, make API call to delete
     if (questionToRemove && questionToRemove.backendId) {
       if (!window.confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
         return; // Cancel deletion
       }
-      
+
       try {
         const adminToken = localStorage.getItem('adminToken');
         const headers: Record<string, string> = {};
         if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
-        
+
         const response = await fetch(`${API_BASE_URL}/ind/mcq/admin/questions/${questionToRemove.backendId}`, {
           method: 'DELETE',
           headers
         });
-        
+
         if (!response.ok) {
           throw new Error("Delete request failed");
         }
@@ -105,6 +263,7 @@ const MCQQuestionsSection: React.FC<MCQQuestionsSectionProps> = ({ questions, se
 
           <div className="flex gap-3">
             <button
+              onClick={handleBulkUpload}
               className="flex h-[46px] items-center gap-2 rounded-[12px] px-5 text-[14px] font-medium text-white shadow-lg"
               style={{
                 background: "white",
@@ -248,6 +407,7 @@ const EditMcq: React.FC<EditMcqProps> = ({
 
   // Get exam data from either props or navigation state
   const examData = propExamData || location.state?.examData;
+  const examId = examData?.id || examData?.exam_id;
 
   const [questions, setQuestions] = useState<QuestionType[]>([]);
 
@@ -275,11 +435,11 @@ const EditMcq: React.FC<EditMcqProps> = ({
         if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
 
         const response = await fetch(`${API_BASE_URL}/ind/mcq/admin/exams/${examId}/questions?limit=500`, { headers });
-        
+
         if (response.ok) {
           const data = await response.json();
           const fetchedQuestions = data.items || data;
-          
+
           if (fetchedQuestions && fetchedQuestions.length > 0) {
             const mappedQuestions = fetchedQuestions.map((q: any) => ({
               id: q.id,
@@ -531,7 +691,7 @@ const EditMcq: React.FC<EditMcqProps> = ({
           </div>
 
           {/* MCQ Questions Section */}
-          <MCQQuestionsSection questions={questions} setQuestions={setQuestions} />
+          <MCQQuestionsSection questions={questions} setQuestions={setQuestions} examId={examId} />
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-y-3 sm:gap-x-3 pb-6 sm:text-left text-center">

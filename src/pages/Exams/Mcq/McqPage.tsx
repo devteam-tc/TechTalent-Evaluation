@@ -315,33 +315,47 @@ const MCQPage: React.FC = () => {
     }
   };
 
-  const handleSaveSchedule = async () => {
+  const findExamId = (obj: any): number | string | null => {
+    if (!obj || typeof obj !== 'object') return null;
+    if ('id' in obj && (typeof obj.id === 'number' || typeof obj.id === 'string')) return obj.id;
+    if ('exam_id' in obj && (typeof obj.exam_id === 'number' || typeof obj.exam_id === 'string')) return obj.exam_id;
+    if ('examId' in obj && (typeof obj.examId === 'number' || typeof obj.examId === 'string')) return obj.examId;
+    for (const key in obj) {
+      if (obj[key] && typeof obj[key] === 'object') {
+        const found = findExamId(obj[key]);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  };
+
+  const handleSaveSchedule = async (): Promise<number | string | null> => {
     console.log('handleSaveSchedule called', { form });
 
     // Validate required fields before creating exam
     if (!form.examName?.trim()) {
       alert('Please enter an exam name');
-      return;
+      return null;
     }
 
     if (!form.description?.trim()) {
       alert('Please enter an exam description');
-      return;
+      return null;
     }
 
     if (!form.duration || Number(form.duration) <= 0) {
       alert('Please enter a valid duration');
-      return;
+      return null;
     }
 
     if (!form.totalMarks || Number(form.totalMarks) <= 0) {
       alert('Please enter valid total marks');
-      return;
+      return null;
     }
 
     if (!form.passingScore || Number(form.passingScore) <= 0) {
       alert('Please enter a valid passing score');
-      return;
+      return null;
     }
 
     // Show loading state without blocking UI
@@ -396,21 +410,23 @@ const MCQPage: React.FC = () => {
       const examData = await response.json();
       console.log('MCQ exam created successfully:', examData);
 
+      const parsedExamId = findExamId(examData);
+      console.log('Parsed created Exam ID:', parsedExamId);
+
       // Update loading message with success
       loadingMessage.textContent = 'MCQ exam created successfully!';
       loadingMessage.style.background = '#10b981';
 
       // Show success message and remove loading notification
       setTimeout(() => {
-        alert('✅ MCQ exam created successfully!');
+        alert(`✅ MCQ exam created successfully! ID: ${parsedExamId}`);
         if (document.body.contains(loadingMessage)) {
           document.body.removeChild(loadingMessage);
         }
       }, 1000);
-
       // Add the new exam to the UI
       const newExam: ExamItem = {
-        id: examData.id || examData.exam_id || Date.now(),
+        id: parsedExamId || Date.now(),
         title: form.examName,
         type: form.examType,
         questions: questions.length,
@@ -437,10 +453,11 @@ const MCQPage: React.FC = () => {
         ),
       );
 
-      const newExamId = examData.id || examData.exam_id;
-      if (newExamId) {
-        setCreatedExamId(newExamId);
+      if (parsedExamId) {
+        setCreatedExamId(parsedExamId);
+        return parsedExamId;
       }
+      return null;
 
     } catch (error) {
       console.error('Error creating MCQ exam:', error);
@@ -453,6 +470,7 @@ const MCQPage: React.FC = () => {
           document.body.removeChild(loadingMessage);
         }
       }, 1000);
+      return null;
     }
   };
 
@@ -537,7 +555,9 @@ const MCQPage: React.FC = () => {
 
         try {
           const adminToken = localStorage.getItem('adminToken');
-          const headers: Record<string, string> = {};
+          const headers: Record<string, string> = {
+            'accept': 'application/json'
+          };
           if (adminToken) {
             headers['Authorization'] = `Bearer ${adminToken}`;
           }
@@ -554,7 +574,31 @@ const MCQPage: React.FC = () => {
           if (!response.ok) {
             const errorText = await response.text();
             console.error('Server error response:', errorText);
-            throw new Error(`Failed to upload questions: ${response.status} - ${errorText}`);
+
+            let displayError = "";
+            try {
+              const errJson = JSON.parse(errorText);
+              const msg = errJson.message || errJson.detail?.message || errJson.error;
+              const subDetail = errJson.detail?.detail || errJson.detail || errJson.error_details;
+
+              if (msg && subDetail && typeof subDetail === 'object') {
+                displayError = `${msg}: Row ${subDetail.row || '?'} - ${subDetail.error || ''}`;
+              } else if (errJson.detail) {
+                if (typeof errJson.detail === 'string') {
+                  displayError = errJson.detail;
+                } else if (Array.isArray(errJson.detail)) {
+                  displayError = errJson.detail.map((d: any) => `${d.loc?.join('.') || 'Error'}: ${d.msg}`).join('\n');
+                } else {
+                  displayError = errJson.detail.message || JSON.stringify(errJson.detail);
+                }
+              } else if (errJson.message) {
+                displayError = errJson.message;
+              }
+            } catch (pErr) {
+              // ignore
+            }
+
+            throw new Error(displayError || `Failed to upload questions: Status ${response.status}`);
           }
 
           const result = await response.json();
@@ -563,20 +607,60 @@ const MCQPage: React.FC = () => {
           loadingToast.textContent = 'Questions uploaded successfully!';
           loadingToast.style.background = '#10b981';
 
-          // We can parse or fetch the questions if needed. If backend response returns them, we can add them to questions list:
-          if (Array.isArray(result)) {
-            const newQuestions: McqQuestion[] = result.map((q: any, index: number) => ({
-              id: Date.now() + index,
+          // Retrieve the questions array from the response body (can be direct array, or nested in items/questions/data)
+          const items = Array.isArray(result) 
+            ? result 
+            : (result?.items || result?.questions || result?.data || null);
+
+          if (Array.isArray(items) && items.length > 0) {
+            const newQuestions: McqQuestion[] = items.map((q: any, index: number) => ({
+              id: q.id || (Date.now() + index),
               type: "MCQ",
-              questionText: q.text || "",
-              options: Array.isArray(q.options) ? q.options.map((opt: any) => opt.text || "") : ["", "", "", ""],
-              correctAnswer: q.correct_index !== undefined ? q.correct_index : null,
+              questionText: q.text || q.questionText || "",
+              options: q.options 
+                ? q.options.map((opt: any) => typeof opt === "string" ? opt : (opt.text || ""))
+                : ["", "", "", ""],
+              correctAnswer: q.correct_index !== undefined ? q.correct_index : (q.correctAnswer ?? null),
               marks: q.marks || 1,
             }));
-            setQuestions((prev) => [...prev, ...newQuestions]);
+            
+            // Filter out default empty question if it's the only one and empty
+            setQuestions((prev) => {
+              const filtered = prev.filter(q => q.questionText.trim() !== "" || q.options.some(o => o.trim() !== ""));
+              return [...filtered, ...newQuestions];
+            });
           } else {
-            // Success placeholder mock if array is not returned
-            alert('✅ Bulk questions uploaded successfully!');
+            // If the response doesn't contain a list of questions directly, fetch them from the database
+            try {
+              const fetchResponse = await fetch(`${API_BASE_URL}/ind/mcq/admin/exams/${examId}/questions?limit=500`, {
+                headers: {
+                  'Authorization': `Bearer ${adminToken}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              if (fetchResponse.ok) {
+                const fetchedData = await fetchResponse.json();
+                const fetchedItems = fetchedData.items || fetchedData;
+                if (Array.isArray(fetchedItems) && fetchedItems.length > 0) {
+                  const mappedQuestions: McqQuestion[] = fetchedItems.map((q: any) => ({
+                    id: q.id,
+                    type: "MCQ",
+                    questionText: q.text || q.questionText || "",
+                    options: q.options ? q.options.map((opt: any) => typeof opt === "string" ? opt : (opt.text || "")) : ["", "", "", ""],
+                    correctAnswer: q.correct_index ?? null,
+                    marks: q.marks || 1
+                  }));
+                  setQuestions(mappedQuestions);
+                } else {
+                  alert('✅ Bulk questions uploaded successfully!');
+                }
+              } else {
+                alert('✅ Bulk questions uploaded successfully!');
+              }
+            } catch (fetchErr) {
+              console.error("Failed to fetch updated questions list:", fetchErr);
+              alert('✅ Bulk questions uploaded successfully!');
+            }
           }
 
           setTimeout(() => {
@@ -733,7 +817,7 @@ const MCQPage: React.FC = () => {
       }
 
       const examData = await response.json();
-      const newExamId = examData.exam?.id || examData.id || examData.exam_id;
+      const newExamId = findExamId(examData);
       
       // Attach the newly created exam to the selected courses
       if (selectedCourseIds.length > 0 && newExamId) {

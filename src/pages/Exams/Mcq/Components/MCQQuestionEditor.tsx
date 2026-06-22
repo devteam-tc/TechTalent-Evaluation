@@ -123,6 +123,7 @@ const MCQQuestionEditor: React.FC<MCQQuestionEditorProps> = ({
                           <div className="flex items-center gap-3">
                             <input
                               type="radio"
+                              name={`correct-answer-${question.id}`}
                               checked={question.correctAnswer === optionIndex}
                               onChange={() =>
                                 onUpdateQuestion(

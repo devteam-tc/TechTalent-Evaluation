@@ -69,6 +69,11 @@ export default function OnlineCompiler() {
   const [testResults, setTestResults] = useState<any[] | null>(null);
 
   const [isAlreadySubmitted, setIsAlreadySubmitted] = useState(false);
+  const [runLoading, setRunLoading] = useState(false);
+  const [testCasesLoading, setTestCasesLoading] = useState(false);
+  const getDashboardPath = () => {
+    return localStorage.getItem("access_token") ? "/individualoverview" : "/overview";
+  };
   const buildPayload = (extra: Record<string, any> = {}) => {
     const currentCode = answers[activeIdx] || "";
 
@@ -92,7 +97,7 @@ export default function OnlineCompiler() {
     toast.warning("Time's up! Submitting your answers...");
     await submitCode();
     toast.error("Exam time ended. Redirecting...");
-    setTimeout(() => navigate("/overview"), 3000);
+    setTimeout(() => navigate(getDashboardPath()), 3000);
   };
 
   // Now your timer useEffect (this one already uses handleTimeUp)
@@ -383,7 +388,7 @@ export default function OnlineCompiler() {
   useEffect(() => {
     if (!examId || !token) {
       toast.error("No exam selected");
-      navigate("/overview");
+      navigate(getDashboardPath());
       return;
     }
     fetchExamDetails();
@@ -436,7 +441,7 @@ export default function OnlineCompiler() {
     } catch (err: any) {
       console.error("Failed to load coding exam", err);
       toast.error("Failed to load exam");
-      navigate("/overview");
+      navigate(getDashboardPath());
     } finally {
       setLoading(false);
     }
@@ -496,6 +501,67 @@ export default function OnlineCompiler() {
   useEffect(() => {
     outputEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [output]);
+
+  const runCodeViaApi = async () => {
+    // remove test case results so console mode returns
+    setTestResultsMap((prev) => {
+      const updated = { ...prev };
+      delete updated[activeIdx];
+      return updated;
+    });
+
+    const currentCode = answers[activeIdx] || "";
+    if (!currentCode.trim()) {
+      toast.error("Write some code first");
+      return;
+    }
+
+    setOutputs((prev) => ({
+      ...prev,
+      [activeIdx]: "Running your code...",
+    }));
+    setRunLoading(true);
+
+    const courseIdRaw = location.state?.courseId || location.state?.course_id || localStorage.getItem("selectedCourseId") || "0";
+    const courseIdNum = parseInt(courseIdRaw) || 0;
+    const questionIdNum = parseInt(currentQuestion?.question_bank_id || currentQuestion?.question_id || currentQuestion?.id || "0") || 0;
+
+    const payload = {
+      course_id: courseIdNum,
+      question_id: questionIdNum,
+      language: language,
+      source_code: currentCode.trim(),
+      user_input: customInput || "",
+    };
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/ind/coding/student/questions/run`,
+        payload
+      );
+
+      const outputData = typeof response.data === "string" ? response.data : JSON.stringify(response.data, null, 2);
+      setOutputs((prev) => ({
+        ...prev,
+        [activeIdx]: outputData || "No output returned.",
+      }));
+    } catch (err: any) {
+      console.error("Run Code API error:", err);
+      const errorMsg = err.response?.data?.detail
+        ? (typeof err.response.data.detail === "string"
+          ? err.response.data.detail
+          : JSON.stringify(err.response.data.detail))
+        : err.response?.data?.message || err.message || "Failed to run code.";
+
+      setOutputs((prev) => ({
+        ...prev,
+        [activeIdx]: `Error: ${errorMsg}`,
+      }));
+      toast.error("Code execution failed");
+    } finally {
+      setRunLoading(false);
+    }
+  };
 
   // WebSocket Run Locally
   const runLocallyWithWebSocket = () => {
@@ -567,7 +633,7 @@ export default function OnlineCompiler() {
     return () => ws.current?.close();
   }, []);
 
-  // Run Test Cases & Submit (unchanged)
+  // Run Test Cases & Submit
   const runTestCases = async () => {
     const currentCode = answers[activeIdx] || "";
     if (!currentQuestion || !currentCode.trim()) {
@@ -575,72 +641,88 @@ export default function OnlineCompiler() {
       return;
     }
 
-    const payload = JSON.stringify([
-      {
-        exam_question_id: parseInt(currentQuestion.exam_question_index),
-        code: currentCode.trim(),
-      },
-    ]);
+    setTestCasesLoading(true);
+    setTestResultsMap((prev) => {
+      const updated = { ...prev };
+      delete updated[activeIdx];
+      return updated;
+    });
+    setOutputs((prev) => ({
+      ...prev,
+      [activeIdx]: "Running test cases...",
+    }));
 
-    console.log("=== DEBUG: Test Cases API Call ===");
-    console.log("Current Question:", currentQuestion);
-    console.log("Question Bank ID:", currentQuestion.question_bank_id);
-    console.log("Exam Question Index:", currentQuestion.exam_question_index);
-    console.log(
-      "Final exam_question_id:",
-      parseInt(currentQuestion.exam_question_index),
-    );
-    console.log("Payload:", payload);
-    console.log(
-      "API URL:",
-      `https://apicompiler.devtalent.securxperts.com:8000/interpreter/test_cases?language=${language}&current_user=${userId}&exam_id=${examId}`,
-    );
+    const courseIdRaw = location.state?.courseId || location.state?.course_id || localStorage.getItem("selectedCourseId") || "0";
+    const courseIdNum = parseInt(courseIdRaw) || 0;
+    const examIdNum = parseInt(examId) || 0;
+    const questionIdNum = parseInt(currentQuestion?.question_bank_id || currentQuestion?.question_id || currentQuestion?.id || "0") || 0;
 
-    setOutput("Running test cases...");
+    const payload = {
+      course_id: courseIdNum,
+      exam_id: examIdNum,
+      language: language,
+      submissions: [
+        {
+          question_id: questionIdNum,
+          code: currentCode.trim(),
+        },
+      ],
+    };
 
     try {
-      const response = await fetch(
-        `https://apicompiler.devtalent.securxperts.com:8000/interpreter/test_cases?language=${language}&current_user=${userId}&exam_id=${examId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: payload,
-        },
+      const response = await axios.post(
+        `${API_BASE_URL}/ind/coding/student/exams/${examIdNum}/test-cases`,
+        payload
       );
-      const data = await response.json();
 
-      console.log("=== DEBUG: Test Cases API Response ===");
-      console.log("Response status:", response.status);
-      console.log("Response data:", data);
-      console.log("Data type:", typeof data);
-      console.log("Is array?", Array.isArray(data));
-      if (Array.isArray(data) && data.length > 0) {
-        console.log("First test structure:", data[0]);
-        console.log("First test has result?", "result" in data[0]);
-        if ("result" in data[0]) {
-          console.log("Result structure:", data[0].result);
+      let data = response.data;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch (e) {
+          // not JSON, keep as string
         }
       }
 
-      if (!response.ok) throw new Error(data.message || "Test failed");
-
-      setTestResultsMap((prev) => ({
-        ...prev,
-        [activeIdx]: data,
-      }));
-      setOutput(""); // clear old text
-      const allPassed = data.every((test: any) =>
-        test.result?.every((r: any) => r.success),
-      );
-      toast.success(
-        allPassed ? "All test cases passed!" : "Some test cases failed",
-      );
+      if (Array.isArray(data)) {
+        setTestResultsMap((prev) => ({
+          ...prev,
+          [activeIdx]: data,
+        }));
+        setOutputs((prev) => {
+          const updated = { ...prev };
+          delete updated[activeIdx];
+          return updated;
+        });
+        const allPassed = data.every((test: any) =>
+          test.result?.every((r: any) => r.success),
+        );
+        toast.success(
+          allPassed ? "All test cases passed!" : "Some test cases failed",
+        );
+      } else {
+        const outputStr = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        setOutputs((prev) => ({
+          ...prev,
+          [activeIdx]: outputStr,
+        }));
+        toast.success("Test cases run completed");
+      }
     } catch (err: any) {
-      setOutput(`Error: ${err.message}`);
+      console.error("Run Test Cases API error:", err);
+      const errorMsg = err.response?.data?.detail
+        ? (typeof err.response.data.detail === "string"
+          ? err.response.data.detail
+          : JSON.stringify(err.response.data.detail))
+        : err.response?.data?.message || err.message || "Failed to run test cases.";
+
+      setOutputs((prev) => ({
+        ...prev,
+        [activeIdx]: `Error: ${errorMsg}`,
+      }));
       toast.error("Failed to run test cases");
+    } finally {
+      setTestCasesLoading(false);
     }
   };
 
@@ -680,51 +762,31 @@ export default function OnlineCompiler() {
                 toast.loading("Submitting your exam...", {
                   id: "submit-loading",
                 });
-                const payload = JSON.stringify([
-                  {
-                    exam_question_id: parseInt(
-                      currentQuestion.exam_question_index,
-                    ),
-                    code: (answers[activeIdx] || "").trim(),
-                  },
-                ]);
 
-                console.log("=== DEBUG: Submit API Call ===");
-                console.log("Current Question:", currentQuestion);
-                console.log(
-                  "Question Bank ID:",
-                  currentQuestion.question_bank_id,
-                );
-                console.log(
-                  "Exam Question Index:",
-                  currentQuestion.exam_question_index,
-                );
-                console.log(
-                  "Final exam_question_id:",
-                  parseInt(currentQuestion.exam_question_index),
-                );
-                console.log("Payload:", payload);
-                console.log(
-                  "API URL:",
-                  `https://apicompiler.devtalent.securxperts.com:8000/interpreter/submit?language=${language}&exam_id=${examId}&candidate_id=${userId}`,
-                );
+                const courseIdRaw = location.state?.courseId || location.state?.course_id || localStorage.getItem("selectedCourseId") || "0";
+                const courseIdNum = parseInt(courseIdRaw) || 0;
+                const examIdNum = parseInt(examId) || 0;
+
+                const submissions = questions.map((q, idx) => {
+                  const code = answers[idx] || "";
+                  return {
+                    question_id: parseInt(q.question_bank_id || q.question_id || q.id || "0") || 0,
+                    code: code.trim(),
+                  };
+                });
+
+                const payload = {
+                  course_id: courseIdNum,
+                  exam_id: examIdNum,
+                  language: language,
+                  submissions: submissions,
+                };
 
                 try {
-                  const response = await fetch(
-                    `https://apicompiler.devtalent.securxperts.com:8000/interpreter/submit?language=${language}&exam_id=${examId}&candidate_id=${userId}`,
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: payload,
-                    },
+                  const response = await axios.post(
+                    `${API_BASE_URL}/ind/coding/student/exams/${examIdNum}/submit`,
+                    payload
                   );
-
-                  const data = await response.json();
-                  if (!response.ok)
-                    throw new Error(data.message || "result already submitted");
 
                   // Clean up timer on successful submit
                   localStorage.removeItem(TIMER_STORAGE_KEY);
@@ -732,7 +794,13 @@ export default function OnlineCompiler() {
                   setShowSuccessModal(true);
                 } catch (err: any) {
                   setIsSubmitPopupOpen(false); // ✅ allow retry
-                  toast.error(err.message || "Submission failed", {
+                  const errorMsg = err.response?.data?.detail
+                    ? (typeof err.response.data.detail === "string"
+                      ? err.response.data.detail
+                      : JSON.stringify(err.response.data.detail))
+                    : err.response?.data?.message || err.message || "Submission failed";
+
+                  toast.error(errorMsg, {
                     id: "submit-loading",
                   });
                 }
@@ -1084,9 +1152,11 @@ export default function OnlineCompiler() {
 
             <div className="flex flex-wrap justify-end gap-2">
               <button
-                onClick={runLocallyWithWebSocket}
-                className="px-3 sm:px-5 py-2 text-sm bg-green-500 text-white rounded-lg"
+                onClick={runCodeViaApi}
+                disabled={runLoading}
+                className="px-3 sm:px-5 py-2 text-sm bg-green-500 text-white rounded-lg flex items-center gap-2"
               >
+                {runLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Run Code
               </button>
 
@@ -1099,8 +1169,10 @@ export default function OnlineCompiler() {
 
               <button
                 onClick={runTestCases}
-                className="px-5 py-2 bg-gray-200 rounded-lg"
+                disabled={testCasesLoading}
+                className="px-5 py-2 bg-gray-200 rounded-lg flex items-center gap-2"
               >
+                {testCasesLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Run Test Cases
               </button>
 
@@ -1150,7 +1222,7 @@ export default function OnlineCompiler() {
             <button
               onClick={() => {
                 setShowSuccessModal(false);
-                navigate("/overview");
+                navigate(getDashboardPath());
               }}
               className="w-full py-3 rounded-xl text-white font-semibold text-lg bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition"
             >
